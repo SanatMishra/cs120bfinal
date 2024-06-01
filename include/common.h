@@ -9,7 +9,7 @@ typedef uint8_t uchar;
 
 inline constexpr int WIDTH = 128;
 inline constexpr int HEIGHT = 128;
-inline constexpr unsigned long UNIV_PERIOD = 30;
+inline constexpr unsigned long UNIV_PERIOD = 100;
 
 #define abs(x) ((x) < 0 ? (-(x)) : (x))
 #define max(x, y) ((x) < (y) ? (y) : (x))

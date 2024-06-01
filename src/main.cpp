@@ -21,8 +21,8 @@ typedef struct _task{
 } task;
 
 // common.h const unsigned long UNIV_PERIOD = 30;
-const unsigned long BUZZ_PERIOD = 10;
-const unsigned long GCD_PERIOD = 10;
+const unsigned long BUZZ_PERIOD = 50;
+const unsigned long GCD_PERIOD = 50;
 
 task tasks[NUM_TASKS];
 
@@ -52,7 +52,6 @@ int TickReadInput(int state) {
 
   switch (state) {
     case RI_INIT:
-      serial_println("Hig");
       jfl = jfd = 310;
       jfr = jfu = 790;
       nx = jx = x;
@@ -110,14 +109,13 @@ int TickReadInput(int state) {
       sw = new_sw;
       bt_up = !bt && new_bt;
       bt = new_bt;
-      serial_println(bt);
       break;
     default: break;
   }
   return state;
 }
 
-uchar menuOption;
+
 char enterHSuname[12];
 bool toPrint;
 
@@ -127,8 +125,9 @@ int TickGameEngine(int state) {
   switch (state) {
     case GE_INIT:
       newTrack(0);
-      menuOption = 0;
       toPrint = 1;
+
+      initMenuScreen();
       state = GE_MENU;
       break;
     case GE_MENU:
@@ -136,12 +135,17 @@ int TickGameEngine(int state) {
         serial_println("Main Menu");
         toPrint = 0;
       }
+      //serial_println(jyd);
       if (jyd_up == 4 && menuOption < 1) {
         menuOption++;
+        scChar('#', 2, 9);
+        scChar(0, 5, 10);
         serial_println("High scores");
         queueBeep(61, 4);
       } else if (jyd_up == 3 && menuOption > 0) {
         menuOption--;
+        scChar('#', 5, 10);
+        scChar(0, 2, 9);
         serial_println("Start");
         queueBeep(61, 4);
       }
@@ -149,9 +153,14 @@ int TickGameEngine(int state) {
         queueBeep(68, 7);
         if (menuOption == 0) {
           newTrack(1);
+          clearMenuScreen();
+          initGameScreen();
           state = GE_STARTSEQ;
         } else {
           toPrint = 1;
+
+          clearMenuScreen();
+          initHSScreen();
           state = GE_HS;
         }
       } else {
@@ -162,7 +171,7 @@ int TickGameEngine(int state) {
       serial_println("Starting Game");
       score = 0;
       toPrint = 1;
-      initGame();
+      //initGame();
       state = GE_GAMEPLAY;
       break;
     case GE_GAMEPLAY:
@@ -186,8 +195,10 @@ int TickGameEngine(int state) {
       newTrack(0);
       //endGame();
       if (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score) {
+        clearGameScreen();
         state = GE_ENTER_HS;
       } else {
+        clearGameScreen();
         state = GE_GAMEOVER;
       }
       break;
@@ -200,6 +211,8 @@ int TickGameEngine(int state) {
         menuOption = 0;
         toPrint = 1;
         newTrack(0);
+
+        initMenuScreen();
         state = GE_MENU;
       } else {
         state = GE_GAMEOVER;
@@ -212,6 +225,8 @@ int TickGameEngine(int state) {
       addHSEntry(enterHSuname, score);
       writeHSEntries();
       toPrint = 1;
+
+      initHSScreen();
       state = GE_HS;
       break;
     case GE_HS:
@@ -224,6 +239,9 @@ int TickGameEngine(int state) {
         newTrack(0);
         menuOption = 0;
         toPrint = 1;
+
+        clearHSScreen();
+        initMenuScreen();
         state = GE_MENU;
       } else {
         state = GE_HS;
@@ -239,8 +257,7 @@ int TickGameEngine(int state) {
     case GE_STARTSEQ:
       break;
     case GE_GAMEPLAY:
-      score = (score < 9999 ? score + 1 : score);
-      //updateGame();
+      updateGame();
       break;
     case GE_SUPER:
       break;
@@ -261,7 +278,6 @@ enum LCDstates{LCD_INIT, LCD_WRITE, LCD_PURGATORY};
 int TickLCDWrite(int state) {
   switch (state) {
     case LCD_INIT:
-      serial_println("jddj");
       state = LCD_WRITE;
       break;
     case LCD_WRITE:
@@ -273,12 +289,10 @@ int TickLCDWrite(int state) {
   switch (state) {
     case LCD_INIT: break;
     case LCD_WRITE:
-      if (gameActive) {
-        serial_println("jdvj");
-        //draw();
-        serial_println("jjdddd");
-        //emptyGraveyard();
-      }
+      //for (int i = 0; i < 32; i++) {
+      //  serial_println(textc[i]);
+      //}
+      draw();
       break;
     default: break;
   }
@@ -289,7 +303,6 @@ enum BWstates{BW_INIT, BW_WRITE};
 int TickBuzzWrite(int state) {
   switch (state) {
     case BW_INIT:
-      serial_println("jj");
       state = BW_WRITE;
       break;
     case BW_WRITE:
@@ -304,7 +317,6 @@ int TickBuzzWrite(int state) {
   switch (state) {
     case BW_INIT: break;
     case BW_WRITE:
-      //serial_println("jjd");
       if (curToneI == tracks[curTrackI].numTones && beepDur == 0) {
         stone(getFreq(0));
         break;
@@ -336,49 +348,23 @@ int TickBuzzWrite(int state) {
 }
 
 void predraw() {
-  uchar xm = 0, xn = 134, ym = 0, yn = 130;
-  /*spic4(CASET, 0, xm, 0, xn);
-  spic4(RASET, 0, ym, 0, yn);
-  spic(RAMWR);
-  for (int i = 0; i < yn - ym + 10; i++) {
-    for (int j = 0; j < xn - xm + 10; j++) {
-      spid((63 % 64) << 2);
-      spid((63 % 64) << 2);
-      spid((63 % 64) << 2);
-    }
-  }
-  _delay_ms(400);*/
-  xm = 2, xn = 129, ym = 1, yn = 128;
+  uchar xm = 2, xn = 129, ym = 1, yn = 128;
+  SREG &= 0x7F;
   spic4(CASET, 0, xm, 0, xn);
   spic4(RASET, 0, ym, 0, yn);
-//while(1) {
   spic(RAMWR);
   for (int i = 0; i < yn - ym + 1; i++) {
     for (int j = 0; j < xn - xm + 1; j++) {
-      spid((20 % 64) << 2);
-      spid((30 % 64) << 2);
-      spid((10 % 64) << 2);
+      spid(0 << 2);
+      spid(63 << 2);
+      spid(0 << 2);
     }
   }
-  //_delay_ms(0);
-  /*spic(RAMWR);
-  for (int i = 0; i < yn - ym + 1; i++) {
-    for (int j = 0; j < xn - xm + 1; j++) {
-      spid((i/3 % 64) << 2);
-      spid((j/3 % 64) << 2);
-      spid((0 % 64) << 2);
-      
-      //_delay_ms(8);
-    }
-  }
-  _delay_ms(1100);
-  */
-//} // while(1)
+  SREG |= 0x80;
 }
 
 int main(void) {
   serial_init(9600);
-  serial_println("herde");
   if (0) {
     clearHSEntries();
     return 0;
@@ -392,30 +378,31 @@ int main(void) {
 
   loadHSEntries();    // Load high scores from EEPROM
   initializeTracks(); // Initialize music tracks
+  initScreen();        // Init text array
   st_init();          // Initialize music PWM
   ADC_init();         // Initializes ADC
-  serial_println("hered");
   SPI_INIT();         // Initializes SPI
-  serial_println("herew");
+  
   gameActive = 0;
+  
   predraw();
-  serial_println("heret");
-
-  // why is this here?
-  OCR0A = 128;
-  TCCR0A = (1 << COM0A1);
-  TCCR0B = (TCCR0B & 0xF8) | 0x02;
+  //scString("Start", 5, 6, 8);
+  //scChar('>', 5, 10);
+  //draw();
+  //while(1);
 
   TCCR1A |= (1 << WGM11) | (1 << COM1A1);
   TCCR1B |= (1 << WGM12) | (1 << WGM13) | (1 << CS11);
   ICR1 = 39999;
   OCR1A = 2999;
-
+  
   tasks[0] = {RI_INIT, UNIV_PERIOD, UNIV_PERIOD, &TickReadInput};
   tasks[1] = {GE_INIT, UNIV_PERIOD, UNIV_PERIOD, &TickGameEngine};
   tasks[2] = {BW_INIT, BUZZ_PERIOD, BUZZ_PERIOD, &TickBuzzWrite};
   tasks[3] = {LCD_INIT, UNIV_PERIOD, UNIV_PERIOD, &TickLCDWrite};
 
+  //scString("Start", 5, 6, 8);
+  //draw();
   //newTrack(1);
   //serial_println(curTone);
   //queueBeep(49 + 12*2, 100);

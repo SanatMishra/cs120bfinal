@@ -1,8 +1,6 @@
 #include "serialATmega.h"
 #include "common.h"
 
-uint sdff = 20;
-
 void serial_init (int baud ) {
     UBRR0 = (((16000000/(baud*16UL)))-1) ; // Set baud rate
     UCSR0B |= (1 << TXEN0 ); 
@@ -29,7 +27,6 @@ void serial_print(const char *str){
 
 //sends a string
 void serial_println(const char *str){
-    sdff += 5;
     for (int i; str[i] != '\0'; i++){
         serial_char(str[i]);
     }
@@ -37,7 +34,7 @@ void serial_println(const char *str){
 }
 
 //sends an long. can be used with integers
-void serial_println(long num, int base = 10){
+void serial_println(long num, int base = 10, int pad = 0){
   char arr[sizeof(long)*8 + 1]; //array with size of largest possible number of digits for long
   char *str = &arr[sizeof(arr) - 1]; //point to last val in buff
   *str = '\0'; //set last val in buff to null terminator
@@ -55,7 +52,9 @@ void serial_println(long num, int base = 10){
         num /= base;//shift to next digit
         str--;//go back a spot in arr
         *str = temp < 10 ? temp + '0' : temp + 'A' - 10; // "+ A - 10" for A-F hex vals
+        pad--;
     }
+    while(pad-- > 0);
   }
 
   serial_println(str);//print from str to end of arr

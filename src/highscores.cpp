@@ -51,14 +51,18 @@ void loadHSEntries() {
   }
 }
 
+void getHSLine(char* line, uchar i) {
+  for (uchar j = 0; j < 11; j++) {
+      line[j] = HSEntries[i].name[j];
+  }
+  sprintf(&line[11], " %04hu", HSEntries[i].score % 10000);
+}
+
 void printHSEntries() {
   char HSline[17];
   serial_println("High scores:");
   for (uchar i = 0; i < numHSEntries; i++) {
-    for (uchar j = 0; j < 11; j++) {
-      HSline[j] = HSEntries[i].name[j];
-    }
-    sprintf(&HSline[11], " %d", HSEntries[i].score % 10000);
+    getHSLine(HSline, i);
     serial_println(HSline);
   }
 }
