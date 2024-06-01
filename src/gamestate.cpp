@@ -11,6 +11,10 @@ bool gameActive;
 ushort score;
 uchar superMeter;
 
+char enterHSuname[12];
+uchar ehscx, ehscy, ehscp;
+uchar hspos;
+
 void initMenuScreen() {
   menuOption = 0;
   scString("Start", 5, 6, 10);
@@ -76,6 +80,65 @@ void updateGame() {
   if (score < 9999) score++;
   if (superMeter < 100) superMeter++;
   printGSMeters();
+}
+
+void initEnterScreen() {
+  hspos = addHSEntry("           ", score);
+
+  scString("Enter High Score", 16, 0, 15);
+
+  for (uchar i = 0; i < 4; i++) {
+    for (uchar j = 0; j < 16; j++) {
+      scChar(pgm_read_byte(&(entryChars[i][j])), j, 13 - i);
+    }
+  }
+  //scString("0123456789:ABCD<", 16, 0, 13);
+  //scString("EFGHIJKLMNOPQRST", 16, 0, 12);
+  //scString("UVWXYZabcdefghij", 16, 0, 11);
+  //scString("klmnopqrstuvwxyz", 16, 0, 10);
+  printHSEntries();
+  scString("                ", 16, 0, MAX_HS_ENTRIES - hspos - 1);
+
+  ehscx = 0;
+  ehscy = 0;
+  ehscp = 0;
+  for (uchar i = 0; i < 11; i++) {
+    enterHSuname[i] = ' ';
+  }
+  enterHSuname[11] = '\0';
+}
+
+void updateEnterHS() {
+  serial_println("here");
+  if (jxd_up == 1) {
+    ehscx = min(15, ehscx + 1);
+  } else if (jxd_up == 2) {
+    ehscx = max(0, ehscx - 1);
+  }
+  if (jyd_up == 3) {
+    ehscy = max(0, ehscy - 1);
+  } else if (jyd_up == 4) {
+    ehscy = min(3, ehscy + 1);
+  }
+  if (sw_up) {
+    enterHSuname[ehscp++] = pgm_read_byte(&(entryChars[ehscy][ehscx]));
+    for (uchar i = 0; i < 11; i++) {
+      HSEntries[hspos].name[i] = enterHSuname[i];
+    }
+    char buff[12];
+    for (uchar i = 0; i < 11; i++) {
+      buff[i] = HSEntries[hspos].name[i];
+    }
+    buff[11] = '\0';
+    serial_println(buff);
+    serial_println(enterHSuname);
+  }
+
+  scString(enterHSuname, 11, 0, MAX_HS_ENTRIES - hspos - 1);
+}
+
+void clearEnterScreen() {
+  scClear();
 }
 
 void draw() {

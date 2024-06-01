@@ -68,7 +68,7 @@ void printHSEntries() {
 }
 
 // uname should be 12 chars long, 11 chars of sensible data and a null byte
-void addHSEntry(char* uname, ushort score) {
+uchar addHSEntry(char* uname, ushort score) {
   uchar i = 0;
   while (i < numHSEntries && HSEntries[i].score >= score)
     i++;
@@ -84,6 +84,7 @@ void addHSEntry(char* uname, ushort score) {
   for (uchar k = 0; k < 11; k++)
     HSEntries[i].name[k] = uname[k];
   HSEntries[i].score = score;
+  return i;
 }
 
 void writeHSEntries() {

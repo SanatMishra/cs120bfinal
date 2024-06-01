@@ -45,6 +45,8 @@ ushort offset(char c) {
     idx = 63;
   } else if (c == '#') {
     idx = 64;
+  } else if (c == '<') {
+    idx = 65;
   }
   return 8*idx;
 }

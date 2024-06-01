@@ -21,8 +21,8 @@ typedef struct _task{
 } task;
 
 // common.h const unsigned long UNIV_PERIOD = 30;
-const unsigned long BUZZ_PERIOD = 50;
-const unsigned long GCD_PERIOD = 50;
+const unsigned long BUZZ_PERIOD = 20;
+const unsigned long GCD_PERIOD = 20;
 
 task tasks[NUM_TASKS];
 
@@ -47,7 +47,7 @@ int TickReadInput(int state) {
   ushort x = ADC_read(0);
   ushort y = ADC_read(1);
   uchar new_jxd, new_jyd, new_jcd;
-  uchar new_sw = 1 - GetBit(PINC, 2);
+  uchar new_sw = 1 - GetBit(PIND, 4);
   uchar new_bt = GetBit(PINC, 2);
 
   switch (state) {
@@ -116,7 +116,6 @@ int TickReadInput(int state) {
 }
 
 
-char enterHSuname[12];
 bool toPrint;
 
 // ONLY Audio code in Game Engine is to set a new track or queue a beep.
@@ -196,6 +195,7 @@ int TickGameEngine(int state) {
       //endGame();
       if (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score) {
         clearGameScreen();
+        initEnterScreen();
         state = GE_ENTER_HS;
       } else {
         clearGameScreen();
@@ -219,15 +219,19 @@ int TickGameEngine(int state) {
       }
       break;
     case GE_ENTER_HS:
-      serial_println("High score! Enter name.");
-      serial_print("score = "); serial_println(score);
-      sprintf(enterHSuname, "score%04dXX", score);
-      addHSEntry(enterHSuname, score);
-      writeHSEntries();
+      //serial_println("High score! Enter name.");
+      //serial_print("score = "); serial_println(score);
+      //sprintf(enterHSuname, "score%04dXX", score);
       toPrint = 1;
 
-      initHSScreen();
-      state = GE_HS;
+      if (bt_up) {
+        writeHSEntries();
+        clearEnterScreen();
+        initHSScreen();
+        state = GE_HS;
+      } else {
+        state = GE_ENTER_HS;
+      }
       break;
     case GE_HS:
       if (toPrint) {
@@ -266,6 +270,7 @@ int TickGameEngine(int state) {
     case GE_GAMEOVER:
       break;
     case GE_ENTER_HS:
+      updateEnterHS();
       break;
     case GE_HS:
       break;
@@ -356,7 +361,7 @@ void predraw() {
   for (int i = 0; i < yn - ym + 1; i++) {
     for (int j = 0; j < xn - xm + 1; j++) {
       spid(0 << 2);
-      spid(63 << 2);
+      spid(0 << 2);
       spid(0 << 2);
     }
   }
@@ -373,8 +378,8 @@ int main(void) {
   PORTB =   0b000000;
   DDRC  =   0b110000;
   PORTC =   0b001111;
-  DDRD  = 0b11111111;
-  PORTD = 0b00000000;
+  DDRD  = 0b11101111;
+  PORTD = 0b00010000;
 
   loadHSEntries();    // Load high scores from EEPROM
   initializeTracks(); // Initialize music tracks

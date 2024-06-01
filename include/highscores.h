@@ -22,7 +22,7 @@ extern ushort curHighScore;
 void loadHSEntries();
 void getHSLine(char* line, uchar i);
 void printHSEntries();
-void addHSEntry(char* uname, ushort score);
+uchar addHSEntry(char* uname, ushort score);
 void writeHSEntries();
 void clearHSEntries();
 
