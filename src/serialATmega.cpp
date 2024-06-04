@@ -32,6 +32,32 @@ void serial_println(const char *str){
     }
     serial_char('\n');
 }
+//sends an long. can be used with integers
+void serial_print(long num, int base = 10, int pad = 0){
+  char arr[sizeof(long)*8 + 1]; //array with size of largest possible number of digits for long
+  char *str = &arr[sizeof(arr) - 1]; //point to last val in buff
+  *str = '\0'; //set last val in buff to null terminator
+
+  if(num < 0){ //if negative, print '-' and turn n to positive
+    serial_char('-');
+    num = -num;
+  }
+
+  if(num == 0){// if 0, print 0
+    serial_char(48);
+  }else{//else, fill up arr starting from the last number
+    while(num) {
+        char temp = num % base;//get digit
+        num /= base;//shift to next digit
+        str--;//go back a spot in arr
+        *str = temp < 10 ? temp + '0' : temp + 'A' - 10; // "+ A - 10" for A-F hex vals
+        pad--;
+    }
+    while(pad-- > 0);
+  }
+
+  serial_print(str);//print from str to end of arr
+}
 
 //sends an long. can be used with integers
 void serial_println(long num, int base = 10, int pad = 0){

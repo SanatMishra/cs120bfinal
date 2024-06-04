@@ -13,10 +13,8 @@ inline constexpr ushort deadzoneY = 100;
 // limits of the joystick in each direction - intentionally shallow to accommodate 
 // poor joysticks, but range widens immediately after stick proceeds past 
 // these bounds, so that we quickly get an accurate measure of stick coordinates 
-extern ushort jfl;
-extern ushort jfr;
-extern ushort jfd;
-extern ushort jfu;
+extern ushort jfl, fjr, jfd, jfu;
+//extern ushort jfu95, jfd95, jfr95, jfl95;
 
 // input variables shared across all files
 // sw_up only set to 1 when going up (i.e. previous value 1, new value 0), otherwise 0
@@ -29,8 +27,8 @@ extern uchar jcd, jcd_up,
        jxd, jxd_up, jyd, jyd_up, 
        sw, sw_up, bt, bt_up;
 
-inline constexpr float maxSpeed = 76.8/(1000/UNIV_PERIOD); // 60% WIDTH
-inline constexpr float minSpeed = 4.04/(1000/UNIV_PERIOD); // 5/95 maxSpeed
+inline constexpr float maxSpeed = 0.6*WIDTH/(1000.0/UNIV_PERIOD); // 60% WIDTH
+inline constexpr float minSpeed = 0.10*maxSpeed; // 10% maxSpeed
 extern float jxi, jyi;
 
 #endif

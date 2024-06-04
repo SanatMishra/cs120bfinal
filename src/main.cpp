@@ -21,8 +21,8 @@ typedef struct _task{
 } task;
 
 // common.h const unsigned long UNIV_PERIOD = 30;
-const unsigned long BUZZ_PERIOD = 20;
-const unsigned long GCD_PERIOD = 20;
+const unsigned long BUZZ_PERIOD = 15;
+const unsigned long GCD_PERIOD = 15;
 
 task tasks[NUM_TASKS];
 
@@ -41,6 +41,7 @@ uchar jcd, jcd_up,
       jxd, jxd_up, jyd, jyd_up, 
       sw, sw_up, bt, bt_up;
 float jxi, jyi;
+// ushort jfu95, jfd95, jfr95, jfl95;
 
 enum RIstates{RI_INIT, RI_READ};
 int TickReadInput(int state) {
@@ -76,24 +77,28 @@ int TickReadInput(int state) {
       jy = y;
       if (jy < jfd) jfd = jy;
       if (jy > jfu) jfu = jy;
-      if (jy < jfl) jfl = jx;
-      if (jy > jfr) jfr = jx;
+      if (jx < jfl) jfl = jx;
+      if (jx > jfr) jfr = jx;
       if (jx > nx + deadzoneX) {
         new_jxd = 1;
-        jxi = calibrate(minSpeed, maxSpeed, nx + deadzoneX + 1, nx + (ushort)(0.95*(jfr - nx) + 0.5), jx);
+        ushort jfr95 = nx + (ushort)(0.95*(jfr - nx) + 0.5);
+        jxi = calibrate(minSpeed, maxSpeed, nx + deadzoneX + 1, jfr95, min(jx, jfr95));
       } else if (jx < nx - deadzoneX) {
         new_jxd = 2;
-        jxi = calibrate(-minSpeed, -maxSpeed, nx - deadzoneX - 1, nx - (ushort)(0.95*(nx - jfl) + 0.5), jx);
+        ushort jfl95 = nx - (ushort)(0.95*(nx - jfl) + 0.5);
+        jxi = calibrate(-minSpeed, -maxSpeed, nx - deadzoneX - 1, jfl95, max(jx, jfl95));
       } else {
         new_jxd = 0;
         jxi = 0;
       }
       if (jy > ny + deadzoneY) {
         new_jyd = 3;
-        jyi = calibrate(minSpeed, maxSpeed, ny + deadzoneY + 1, ny + (ushort)(0.95*(jfu - ny) + 0.5), jy);
+        ushort jfu95 = ny + (ushort)(0.95*(jfu - ny) + 0.5);
+        jyi = calibrate(minSpeed, maxSpeed, ny + deadzoneY + 1, jfu95, min(jy, jfu95));
       } else if (jy < ny - deadzoneY) {
         new_jyd = 4;
-        jyi = calibrate(-minSpeed, -maxSpeed, ny - deadzoneY - 1, ny - (ushort)(0.95*(jfd - ny) + 0.5), jy);
+        ushort jfd95 = ny - (ushort)(0.95*(ny - jfd) + 0.5);
+        jyi = calibrate(-minSpeed, -maxSpeed, ny - deadzoneY - 1, jfd95, max(jy, jfd95));
       } else {
         new_jyd = 0;
         jyi = 0;
@@ -119,13 +124,12 @@ int TickReadInput(int state) {
 bool toPrint;
 
 // ONLY Audio code in Game Engine is to set a new track or queue a beep.
-enum GEstates{GE_INIT, GE_MENU, GE_STARTSEQ, GE_GAMEPLAY, GE_SUPER, GE_ENDSEQ, GE_GAMEOVER, GE_ENTER_HS, GE_WRITE_HS, GE_HS, GE_PURGATORY};
+enum GEstates{GE_INIT, GE_MENU, GE_GAMEPLAY, GE_SUPER, GE_GAMEOVER, GE_ENTER_HS, GE_HS, GE_PURGATORY};
 int TickGameEngine(int state) {
   switch (state) {
     case GE_INIT:
       newTrack(0);
       toPrint = 1;
-
       initMenuScreen();
       state = GE_MENU;
       break;
@@ -134,30 +138,18 @@ int TickGameEngine(int state) {
         serial_println("Main Menu");
         toPrint = 0;
       }
-      //serial_println(jyd);
-      if (jyd_up == 4 && menuOption < 1) {
-        menuOption++;
-        scChar('#', 2, 9);
-        scChar(0, 5, 10);
-        serial_println("High scores");
-        queueBeep(61, 4);
-      } else if (jyd_up == 3 && menuOption > 0) {
-        menuOption--;
-        scChar('#', 5, 10);
-        scChar(0, 2, 9);
-        serial_println("Start");
-        queueBeep(61, 4);
-      }
+
       if (bt_up) {
         queueBeep(68, 7);
         if (menuOption == 0) {
           newTrack(1);
+          initGame();
           clearMenuScreen();
           initGameScreen();
-          state = GE_STARTSEQ;
+          toPrint = 1;
+          state = GE_GAMEPLAY;
         } else {
           toPrint = 1;
-
           clearMenuScreen();
           initHSScreen();
           state = GE_HS;
@@ -166,41 +158,33 @@ int TickGameEngine(int state) {
         state = GE_MENU;
       }
       break;
-    case GE_STARTSEQ:
-      serial_println("Starting Game");
-      score = 0;
-      toPrint = 1;
-      //initGame();
-      state = GE_GAMEPLAY;
-      break;
     case GE_GAMEPLAY:
+      serial_println("Starting Game");
       if (toPrint) {
         serial_println("Playing Game");
         toPrint = 0;
       }
       if (bt_up) {
-        state = GE_ENDSEQ;
+        serial_println("Ending Game");
+        serial_print("Score: ");
+        serial_println(score);
+        newTrack(0);
+        endGame();
+        if (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score) {
+          clearGameScreen();
+          initEnterScreen();
+          state = GE_ENTER_HS;
+        } else {
+          clearGameScreen();
+          initGameOverScreen();
+          state = GE_GAMEOVER;
+        }
       } else {
         state = GE_GAMEPLAY;
       }
       break;
     case GE_SUPER:
       state = GE_GAMEPLAY;
-      break;
-    case GE_ENDSEQ:
-      serial_println("Ending Game");
-      serial_print("Score: ");
-      serial_println(score);
-      newTrack(0);
-      //endGame();
-      if (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score) {
-        clearGameScreen();
-        initEnterScreen();
-        state = GE_ENTER_HS;
-      } else {
-        clearGameScreen();
-        state = GE_GAMEOVER;
-      }
       break;
     case GE_GAMEOVER:
       if (toPrint) {
@@ -212,6 +196,7 @@ int TickGameEngine(int state) {
         toPrint = 1;
         newTrack(0);
 
+        clearGameOverScreen();
         initMenuScreen();
         state = GE_MENU;
       } else {
@@ -235,7 +220,7 @@ int TickGameEngine(int state) {
       break;
     case GE_HS:
       if (toPrint) {
-        printHSEntries();
+        printHSEntriesl();
         toPrint = 0;
       }
       
@@ -257,15 +242,12 @@ int TickGameEngine(int state) {
   switch (state) {
     case GE_INIT: break;
     case GE_MENU:
-      break;
-    case GE_STARTSEQ:
+      updateMenuScreen();
       break;
     case GE_GAMEPLAY:
       updateGame();
       break;
     case GE_SUPER:
-      break;
-    case GE_ENDSEQ:
       break;
     case GE_GAMEOVER:
       break;
@@ -273,31 +255,6 @@ int TickGameEngine(int state) {
       updateEnterHS();
       break;
     case GE_HS:
-      break;
-    default: break;
-  }
-  return state;
-}
-
-enum LCDstates{LCD_INIT, LCD_WRITE, LCD_PURGATORY};
-int TickLCDWrite(int state) {
-  switch (state) {
-    case LCD_INIT:
-      state = LCD_WRITE;
-      break;
-    case LCD_WRITE:
-      state = LCD_WRITE;
-      break;
-    default: break;
-  }
-  
-  switch (state) {
-    case LCD_INIT: break;
-    case LCD_WRITE:
-      //for (int i = 0; i < 32; i++) {
-      //  serial_println(textc[i]);
-      //}
-      draw();
       break;
     default: break;
   }
@@ -352,6 +309,40 @@ int TickBuzzWrite(int state) {
   return state;
 }
 
+enum LCDstates{LCD_INIT, LCD_WRITE, LCD_PURGATORY};
+int TickLCDWrite(int state) {
+  switch (state) {
+    case LCD_INIT:
+      state = LCD_WRITE;
+      break;
+    case LCD_WRITE:
+      state = LCD_WRITE;
+      break;
+    default: break;
+  }
+  
+  switch (state) {
+    case LCD_INIT: break;
+    case LCD_WRITE:
+      //for (int i = 0; i < 32; i++) {
+      //  serial_println(textc[i]);
+      //}
+      draw();
+      if (gameActive)
+        emptyGraveyard();
+      break;
+    default: break;
+  }
+  return state;
+}
+
+void initSMAS() {
+  gameActive = 0;
+  gameNeedsClearing = 0;
+  player.pa = player.na = 2;
+  bullets = ActorList<Bullet, MAX_BULLETS>();
+}
+
 void predraw() {
   uchar xm = 2, xn = 129, ym = 1, yn = 128;
   SREG &= 0x7F;
@@ -384,12 +375,10 @@ int main(void) {
   loadHSEntries();    // Load high scores from EEPROM
   initializeTracks(); // Initialize music tracks
   initScreen();        // Init text array
+  initSMAS();
   st_init();          // Initialize music PWM
   ADC_init();         // Initializes ADC
   SPI_INIT();         // Initializes SPI
-  
-  gameActive = 0;
-  
   predraw();
   //scString("Start", 5, 6, 8);
   //scChar('>', 5, 10);

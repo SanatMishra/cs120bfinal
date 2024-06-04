@@ -58,7 +58,7 @@ void getHSLine(char* line, uchar i) {
   sprintf(&line[11], " %04hu", HSEntries[i].score % 10000);
 }
 
-void printHSEntries() {
+void printHSEntriesl() {
   char HSline[17];
   serial_println("High scores:");
   for (uchar i = 0; i < numHSEntries; i++) {

@@ -67,7 +67,7 @@ void initializeTracks() {
 
   i = 1;
   tracks[1].key = 30;
-  tracks[1].speed = 16;
+  tracks[1].speed = 10;
   tracks[1].numTones = 0;
   tracks[1].notebreak = 1;
   tracks[1].loop = 1;

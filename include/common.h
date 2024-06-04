@@ -9,14 +9,14 @@ typedef uint8_t uchar;
 
 inline constexpr int WIDTH = 128;
 inline constexpr int HEIGHT = 128;
-inline constexpr unsigned long UNIV_PERIOD = 80;
+inline constexpr unsigned long UNIV_PERIOD = 60;
 
 #define abs(x) ((x) < 0 ? (-(x)) : (x))
 #define max(x, y) ((x) < (y) ? (y) : (x))
 #define min(x, y) ((x) > (y) ? (y) : (x))
-#define uround(x) ((uint)((x) > 0 ? (x) + 0.5 : (x) - 0.5))
+#define uround(x) ((uint)((x) < 0 ? 0 : (x) + 0.5))
 #define clamp(l, h, x) ((x) > (h) ? (h) : ((x) < (l) ? (l) : (x)))
-#define calibrate(ly, hy, lx, hx, x) ( (ly) + 1.0*((x) - (lx))/((hx) - (lx))*((hy) - (ly)) )
+#define calibrate(ly, hy, lx, hx, x) ( (ly) + (1.0*(x) - (lx))/(1.0*(hx) - (lx))*(1.0*(hy) - (ly)) )
 #define g2sx(x) (129 - x)
 #define g2sy(y) (1 + y)
 #define SetBit(x, k, b) (uchar)((uchar)(b) ?  ((uchar)(x) | (0x01 << (uchar)(k)))  :  ((uchar)(x) & ~(0x01 << (uchar)(k))) )
