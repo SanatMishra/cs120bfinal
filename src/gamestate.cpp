@@ -102,7 +102,7 @@ void initGame() {
   player.s = 0;
   player.needsRedraw = 1;
 }
-/*
+
 void newBullet(float xt, float yt, float v) {
   uchar bi = bullets.addActor();
   if (bi < MAX_BULLETS) {
@@ -117,14 +117,14 @@ void newBullet(float xt, float yt, float v) {
     bullets[bi].v = v;
   }
 }
-*/
+
 void moveWithinBounds(Actor* a, float vx, float vy) {
   a->xt = clamp(GXMIN, GXMAX - a->w + 1, a->xt + vx);
   a->yt = clamp(GYMIN, GYMAX - a->h + 1, a->yt + vy);
   a->x = uround(a->xt);
   a->y = uround(a->yt);
 }
-/*
+
 void bulletsMove() {
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     bullets[i].xp = bullets[i].x;
@@ -132,7 +132,7 @@ void bulletsMove() {
     moveWithinBounds(&bullets[i], 0, bullets[i].v);
   }
 }
-*/
+
 void playerMoves() {
   player.xp = player.x;
   player.yp = player.y;
@@ -142,11 +142,11 @@ void playerMoves() {
 void updateGame() {
   //bulletsMove();
   playerMoves();
-/*
+
   if (bt_up) {
     newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0.1);
   }
-*/
+
   if (player.x != player.xp || player.y != player.yp) {
     /*serial_print("nx="); serial_print(nx); serial_print(" ny="); serial_print(ny);
     serial_print(" jx="); serial_print(jx); serial_print(" jy="); serial_println(jy);
@@ -379,12 +379,12 @@ void drawActor(Actor* a) {
       xn = a->x + w - 1;
       ym = a->y;
       yn = a->y + h - 1;
-      /*serial_print(w); serial_print(" ");
+      serial_print(w); serial_print(" ");
       serial_print(h); serial_print(" ");
       serial_print(xm); serial_print(" ");
       serial_print(xn); serial_print(" ");
       serial_print(ym); serial_print(" ");
-      serial_println(yn);*/
+      serial_println(yn);
       SREG &= 0x7F;
       spic4(CASET, 0, g2sx(xn), 0, g2sx(xm));
       spic4(RASET, 0, g2sy(ym), 0, g2sy(yn));
@@ -392,12 +392,12 @@ void drawActor(Actor* a) {
       for (uchar y = ym; y <= yn; y++) {
         for (uchar x = xn; x >= xm && x < 255; x--) {
           uint rpx = getspx(a->s, x - a->x, y - a->y);
-          /*serial_print(x); serial_print("#");
+          serial_print(x); serial_print("#");
           serial_print(y); serial_print("#");
           serial_print(ccx(rpx)); serial_print("#");
           serial_print(ccr(rpx)); serial_print("#");
           serial_print(ccg(rpx)); serial_print("#");
-          serial_println(ccb(rpx));*/
+          serial_println(ccb(rpx));
           spid(ccb(rpx) << 2);
           spid(ccg(rpx) << 2);
           spid(ccr(rpx) << 2);

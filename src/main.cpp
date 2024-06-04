@@ -159,7 +159,6 @@ int TickGameEngine(int state) {
       }
       break;
     case GE_GAMEPLAY:
-      serial_println("Starting Game");
       if (toPrint) {
         serial_println("Playing Game");
         toPrint = 0;
@@ -340,7 +339,13 @@ void initSMAS() {
   gameActive = 0;
   gameNeedsClearing = 0;
   player.pa = player.na = 2;
-  bullets = ActorList<Bullet, MAX_BULLETS>();
+  // bullets = ActorList<Bullet, MAX_BULLETS>();
+  bullets.actb = bullets.acte = MAX_BULLETS;
+  bullets.actfb = 0;
+  for (uchar i = 0; i < MAX_BULLETS; i++) {
+    bullets[i].na = i + 1;
+    bullets[i].pa = MAX_BULLETS + 1;
+  }
 }
 
 void predraw() {
