@@ -6,25 +6,26 @@
 template <typename T, uchar MAX_ACTORS>
 class ActorList {
 public:
-  // static array of actors. they maintain forward and back pointers (na, pa), so we can
-  // run a doubly-linked ring of actors from MAX_ACTORS to actb to acte to MAX_ACTORS.
-  // Actors that have not been yet assigned are entered into a stack starting at actfb, 
-  // to all other free elements and finally to MAX_ACTORS. For the free stack, only the 
-  // forward pointer (na) is maintained. Upon actor creation, actfb is inserted in between
-  // acte and MAX_ACTORS, acte is set to actfb, and actfb is set to the next element in 
-  // the free stack. Upon actor deletion, the reverse happens. If the number of actors 
-  // drops below 0 or rises to >= MAX_ACTORS, the game crashes.
+  // static array of actors. each actor maintains forward and back pointers (na, pa), 
+  // so we can run a doubly-linked ring of actors from MAX_ACTORS to actb to acte to 
+  // MAX_ACTORS. Actors that have not been yet assigned are entered into a stack starting
+  // at actfb, to all other free elements and finally to MAX_ACTORS. For the free stack, 
+  // only the forward pointer (na) is maintained. Upon actor creation, actfb is inserted
+  // in between acte and MAX_ACTORS, acte is set to actfb, and actfb is set to the next 
+  // element in the free stack. Upon actor deletion, the reverse happens. Upon attempting
+  // to delete a nonexistent actor, the game crashes. Upon attempting to add beyond 
+  // MAX_ACTORS, no add occurs but the game continues as usual.
   T actors[MAX_ACTORS];
   uchar actb, acte, actfb;
 
   ActorList() {
-  actb = acte = MAX_ACTORS;
-  actfb = 0;
-  for (uchar i = 0; i < MAX_ACTORS; i++) {
-    actors[i].na = i + 1;
-    actors[i].pa = MAX_ACTORS + 1;
+    actb = acte = MAX_ACTORS;
+    actfb = 0;
+    for (uchar i = 0; i < MAX_ACTORS; i++) {
+      actors[i].na = i + 1;
+      actors[i].pa = MAX_ACTORS + 1;
+    }
   }
-}
 
   const T& operator[](int i) const { return actors[i]; }
   T& operator[](int i) { return actors[i]; }
@@ -33,7 +34,7 @@ public:
   uchar addActor() {
   if (actfb == MAX_ACTORS) {
       serial_println("NO FREE ACTORS");
-      actfb = 1/0;
+      return MAX_ACTORS;
   }
   uchar actfbOrig = actfb;
   if (acte < MAX_ACTORS) {

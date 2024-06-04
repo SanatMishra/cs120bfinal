@@ -34,7 +34,7 @@ typedef struct Actor {
 } Actor;
 
 typedef struct Bullet : public Actor {
-  uchar v;
+  float v;
 } Bullet;
 
 #define MAX_BULLETS 10

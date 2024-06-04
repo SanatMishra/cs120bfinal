@@ -164,7 +164,7 @@ int TickGameEngine(int state) {
         serial_println("Playing Game");
         toPrint = 0;
       }
-      if (bt_up) {
+      if (!gameActive) {
         serial_println("Ending Game");
         serial_print("Score: ");
         serial_println(score);
@@ -375,7 +375,7 @@ int main(void) {
   loadHSEntries();    // Load high scores from EEPROM
   initializeTracks(); // Initialize music tracks
   initScreen();        // Init text array
-  initSMAS();
+  initSMAS();         // Init variables persistent across games
   st_init();          // Initialize music PWM
   ADC_init();         // Initializes ADC
   SPI_INIT();         // Initializes SPI

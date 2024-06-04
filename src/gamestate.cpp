@@ -102,16 +102,51 @@ void initGame() {
   player.s = 0;
   player.needsRedraw = 1;
 }
-
-void updateGame() {
+/*
+void newBullet(float xt, float yt, float v) {
+  uchar bi = bullets.addActor();
+  if (bi < MAX_BULLETS) {
+    bullets[bi].w = 2; bullets[bi].h = 3;
+    bullets[bi].xt = xt;
+    bullets[bi].yt = yt;
+    bullets[bi].xp = bullets[bi].x = uround(bullets[bi].xt);
+    bullets[bi].yp = bullets[bi].y = uround(bullets[bi].yt);
+    bullets[bi].alive = 1;
+    bullets[bi].s = 2;
+    bullets[bi].needsRedraw = 1;
+    bullets[bi].v = v;
+  }
+}
+*/
+void moveWithinBounds(Actor* a, float vx, float vy) {
+  a->xt = clamp(GXMIN, GXMAX - a->w + 1, a->xt + vx);
+  a->yt = clamp(GYMIN, GYMAX - a->h + 1, a->yt + vy);
+  a->x = uround(a->xt);
+  a->y = uround(a->yt);
+}
+/*
+void bulletsMove() {
+  for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
+    bullets[i].xp = bullets[i].x;
+    bullets[i].yp = bullets[i].y;
+    moveWithinBounds(&bullets[i], 0, bullets[i].v);
+  }
+}
+*/
+void playerMoves() {
   player.xp = player.x;
   player.yp = player.y;
+  moveWithinBounds(&player, jxi, jyi);
+}
 
-  player.xt = clamp(GXMIN, GXMAX - player.w + 1, player.xt + jxi);
-  player.yt = clamp(GYMIN, GYMAX - player.h + 1, player.yt + jyi);
-  player.x = uround(player.xt);
-  player.y = uround(player.yt);
-
+void updateGame() {
+  //bulletsMove();
+  playerMoves();
+/*
+  if (bt_up) {
+    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0.1);
+  }
+*/
   if (player.x != player.xp || player.y != player.yp) {
     /*serial_print("nx="); serial_print(nx); serial_print(" ny="); serial_print(ny);
     serial_print(" jx="); serial_print(jx); serial_print(" jy="); serial_println(jy);
@@ -124,6 +159,9 @@ void updateGame() {
     player.needsRedraw = 1;
   }
 
+
+  if (player.x == 0)
+    gameActive = 0;
   if (score < 9999) score++;
   if (superMeter < 100) superMeter++;
   printGSMeters();
@@ -301,10 +339,17 @@ void drawOneActorInRange(Actor* a, uchar* buf, uchar xm, uchar xn, uchar ym, uch
   }
 }
 
+void memsett(void* arg, uchar x, uint n) {
+  for (uchar* i = (uchar*)arg; i < (uchar*)arg + n; i++) {
+    *i = x;
+  }
+}
+
 // assumes called from drawSprites, with accompanying conditions
 void drawAllActorsInRange(uchar xm, uchar xn, uchar ym, uchar yn) {
   uchar buf[xn - xm + 1][yn - ym + 1][3] = {{{0}}};
-  
+  memsett(buf, 0, sizeof(buf));
+
   drawOneActorInRange(&player, (uchar*)buf, xm, xn, ym, yn);
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     drawOneActorInRange(&bullets[i], (uchar*)buf, xm, xn, ym, yn);
