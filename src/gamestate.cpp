@@ -8,6 +8,7 @@
 
 uchar menuOption;
 
+uint gameTime;
 bool gameActive;
 bool gameNeedsClearing;
 ushort score;
@@ -89,6 +90,7 @@ void clearGameScreen() {
 }
 
 void initGame() {
+  gameTime = 0;
   gameActive = 1;
   superMeter = 0;
   score = 0;
@@ -118,33 +120,64 @@ void newBullet(float xt, float yt, float v) {
   }
 }
 
-void moveWithinBounds(Actor* a, float vx, float vy) {
-  a->xt = clamp(GXMIN, GXMAX - a->w + 1, a->xt + vx);
-  a->yt = clamp(GYMIN, GYMAX - a->h + 1, a->yt + vy);
+uchar moveWithinBounds(Actor* a, float vx, float vy) {
+  uchar ret = 4;
+  a->xt += vx;
+  if (a->xt > GXMAX - a->w + 1) {
+    a->xt = GXMAX - a->w + 1;
+    ret += 1;
+  }
+  if (a->xt < GXMIN) {
+    a->xt = GXMIN;
+    ret -= 1;
+  }
+  a->yt += vy; 
+  if (a->yt > GYMAX - a->h + 1) {
+    a->yt = GYMAX - a->h + 1;
+    ret += 3;
+  }
+  if (a->yt < GYMIN) {
+    a->yt = GYMIN;
+    ret -= 3;
+  }
   a->x = uround(a->xt);
   a->y = uround(a->yt);
+  return ret;
 }
 
 void bulletsMove() {
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     bullets[i].xp = bullets[i].x;
     bullets[i].yp = bullets[i].y;
-    moveWithinBounds(&bullets[i], 0, bullets[i].v);
+    if (moveWithinBounds(&bullets[i], 0, bullets[i].v) != 4) {
+      bullets[i].alive = 0;
+      bullets[i].needsRedraw = 1;
+    }
   }
 }
 
 void playerMoves() {
   player.xp = player.x;
   player.yp = player.y;
-  moveWithinBounds(&player, jxi, jyi);
+  if (moveWithinBounds(&player, jxi, jyi) != 4) {
+    gameActive = 0;
+  }
 }
 
 void updateGame() {
-  //bulletsMove();
+  bulletsMove();
   playerMoves();
+  if (!gameActive)
+    return;
 
-  if (bt_up) {
-    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0.1);
+  if (bt_up && gameTime > 0) {
+    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 10);
+    for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
+      serial_print(bullets[i].x); serial_print("^");
+      serial_print(bullets[i].y); serial_print("^");
+      serial_print(bullets[i].pa); serial_print("^");
+      serial_println(bullets[i].na);
+    }
   }
 
   if (player.x != player.xp || player.y != player.yp) {
@@ -158,12 +191,14 @@ void updateGame() {
     serial_println("-----");*/
     player.needsRedraw = 1;
   }
+  for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
+    if(bullets[i].x != bullets[i].xp || bullets[i].y != bullets[i].yp)
+      bullets[i].needsRedraw = 1;
+  }
 
-
-  if (player.x == 0)
-    gameActive = 0;
   if (score < 9999) score++;
   if (superMeter < 100) superMeter++;
+  gameTime++;
   printGSMeters();
 }
 
@@ -406,42 +441,42 @@ void drawActor(Actor* a) {
       SREG |= 0x80;
 
       if (a->xp != a->x) {
-      ym = a->yp;
-      yn = a->yp + h - 1;
-      if (a->xp < a->x) {
-        xm = a->xp;
-        xn = a->x - 1;
-      } else {
-        xm = a->x + w;
-        xn = a->xp + w - 1;
-      }
-      if (xm < a->xp) xm = a->xp;
-      if (xn > a->xp + w - 1) xn = a->xp + w - 1;
-      if (ym < a->yp) ym = a->yp;
-      if (yn > a->yp + h - 1) yn = a->yp + h - 1;
-      drawAllActorsInRange(xm, xn, ym, yn);
-    }
-      if (a->yp != a->y) {
-      if (a->xp < a->x) {
-        xm = a->x;
-        xn = a->xp + w - 1;
-      } else {
-        xm = a->xp;
-        xn = a->x + w - 1;
-      }
-      if (a->yp < a->y) {
         ym = a->yp;
-        yn = a->y - 1;
-      } else {
-        ym = a->y + h;
         yn = a->yp + h - 1;
+        if (a->xp < a->x) {
+          xm = a->xp;
+          xn = a->x - 1;
+        } else {
+          xm = a->x + w;
+          xn = a->xp + w - 1;
+        }
+        if (xm < a->xp) xm = a->xp;
+        if (xn > a->xp + w - 1) xn = a->xp + w - 1;
+        if (ym < a->yp) ym = a->yp;
+        if (yn > a->yp + h - 1) yn = a->yp + h - 1;
+        drawAllActorsInRange(xm, xn, ym, yn);
       }
-      if (xm < a->xp) xm = a->xp;
-      if (xn > a->xp + w - 1) xn = a->xp + w - 1;
-      if (ym < a->yp) ym = a->yp;
-      if (yn > a->yp + h - 1) yn = a->yp + h - 1;
-      drawAllActorsInRange(xm, xn, ym, yn);
-    }
+      if (a->yp != a->y) {
+        if (a->xp < a->x) {
+          xm = a->x;
+          xn = a->xp + w - 1;
+        } else {
+          xm = a->xp;
+          xn = a->x + w - 1;
+        }
+        if (a->yp < a->y) {
+          ym = a->yp;
+          yn = a->y - 1;
+        } else {
+          ym = a->y + h;
+          yn = a->yp + h - 1;
+        }
+        if (xm < a->xp) xm = a->xp;
+        if (xn > a->xp + w - 1) xn = a->xp + w - 1;
+        if (ym < a->yp) ym = a->yp;
+        if (yn > a->yp + h - 1) yn = a->yp + h - 1;
+        drawAllActorsInRange(xm, xn, ym, yn);
+      }
     } else {
       drawAllActorsInRange(a->x, a->xp + w - 1, a->y, a->y + h - 1);
     }
@@ -466,7 +501,9 @@ void draw() {
 
 // pop dead actors from the list only after having drawn them
 void emptyGraveyard() {
-  for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
+  uchar ni;
+  for (uchar i = bullets.actb; i < MAX_BULLETS; i = ni) {
+    ni = bullets[i].na;
     if (!bullets[i].alive) {
       bullets.deleteActor(i);
     }

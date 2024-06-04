@@ -118,7 +118,7 @@ void scColorString(uchar n, uchar x, uchar y, uchar pid) {
 }
 
 uint getspx(uchar i, uchar x, uchar y) {
-  if (x < 0 || x >= spritesW(i) || y < 0 || y >= spritesW(i))
+  if (x < 0 || x >= spritesW(i) || y < 0 || y >= spritesH(i))
     return cclear;
   ushort ti = x + spritesW(i)*(spritesH(i) - y - 1);
   return spritesPalette(i, (spriteData(spritesOff(i) + ti / 4) >> 2*(3 - ti % 4)) & 0x03);

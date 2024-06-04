@@ -19,6 +19,7 @@ inline constexpr char entryChars[4][16] PROGMEM = {{'0','1','2','3','4','5','6',
 
 extern uchar menuOption;
 
+extern uint gameTime;
 extern bool gameActive;
 extern bool gameNeedsClearing;
 extern ushort score;
