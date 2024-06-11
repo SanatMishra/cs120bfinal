@@ -23,6 +23,4 @@ inline constexpr unsigned long UNIV_PERIOD = 60;
 #define GetBit(x, k) (uchar)(((uchar)(x) & (0x01 << (uchar)(k))) != 0)
 //#define xxclear(i,j) ((i) >= 40 && (i) <= 70 && (j) >= 30 && (j) <= 45)
 
-extern uint sdff;
-
 #endif

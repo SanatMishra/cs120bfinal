@@ -13,7 +13,7 @@ inline constexpr ushort deadzoneY = 100;
 // limits of the joystick in each direction - intentionally shallow to accommodate 
 // poor joysticks, but range widens immediately after stick proceeds past 
 // these bounds, so that we quickly get an accurate measure of stick coordinates 
-extern ushort jfl, fjr, jfd, jfu;
+extern ushort jfl, jfr, jfd, jfu;
 //extern ushort jfu95, jfd95, jfr95, jfl95;
 
 // input variables shared across all files

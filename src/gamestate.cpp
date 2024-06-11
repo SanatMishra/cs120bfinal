@@ -11,6 +11,7 @@ uchar menuOption;
 uint gameTime;
 bool gameActive;
 bool gameNeedsClearing;
+bool gameForcedReset;
 ushort score;
 uchar superMeter;
 
@@ -145,10 +146,17 @@ uchar moveWithinBounds(Actor* a, float vx, float vy) {
   return ret;
 }
 
-void bulletsMove() {
+void setXPYP() {
+  player.xp = player.x;
+  player.yp = player.y;
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     bullets[i].xp = bullets[i].x;
     bullets[i].yp = bullets[i].y;
+  }
+}
+
+void bulletsMove() {
+  for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     if (moveWithinBounds(&bullets[i], 0, bullets[i].v) != 4) {
       bullets[i].alive = 0;
       bullets[i].needsRedraw = 1;
@@ -157,21 +165,26 @@ void bulletsMove() {
 }
 
 void playerMoves() {
-  player.xp = player.x;
-  player.yp = player.y;
   if (moveWithinBounds(&player, jxi, jyi) != 4) {
     gameActive = 0;
   }
 }
 
 void updateGame() {
+  setXPYP();
+  if (bt_up && sw_up) {
+    gameActive = 0;
+    score = 0;
+    gameForcedReset = 1;
+    return;
+  }
   bulletsMove();
   playerMoves();
   if (!gameActive)
     return;
 
   if (bt_up && gameTime > 0) {
-    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 10);
+    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 1);
     for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
       serial_print(bullets[i].x); serial_print("^");
       serial_print(bullets[i].y); serial_print("^");
@@ -358,16 +371,31 @@ void drawText() {
 }
 
 void drawOneActorInRange(Actor* a, uchar* buf, uchar xm, uchar xn, uchar ym, uchar yn) {
-  if (a->needsRedraw
+  bool db = 0;
+  if (a->alive
       && a->x <= xn && a->x + spritesW(a->s) - 1 >= xm
       && a->y <= yn && a->y + spritesH(a->s) - 1 >= ym) {
+    if (db) {
+      serial_println("--DOA--");
+      for (uchar y = ym; y <= yn; y++) {
+        serial_print(y); serial_print("| ");
+        for (uchar x = xn; x >= xm && x < 255; x--) {
+          uint rpx = getspx(a->s, x - a->x, y - a->y);
+          serial_print(x); serial_print(": ");
+          serial_print(ccr(rpx)); serial_print(" ");
+          serial_print(ccg(rpx)); serial_print(" ");
+          serial_print(ccb(rpx)); serial_print(" ");
+        }
+        serial_println("");
+      }
+    }
     for (uchar y = ym; y <= yn; y++) {
       for (uchar x = xn; x >= xm && x < 255; x--) {
-        uint rpx = getspx(a->x, x - a->x, y - a->y);
-        if (a->alive && !ccx(rpx)) {
-          buf[(x - xm)*(yn - ym - 1)*3 + (y - ym)*3 + 0] = ccr(rpx);
-          buf[(x - xm)*(yn - ym - 1)*3 + (y - ym)*3 + 1] = ccg(rpx);
-          buf[(x - xm)*(yn - ym - 1)*3 + (y - ym)*3 + 2] = ccb(rpx);
+        uint rpx = getspx(a->s, x - a->x, y - a->y);
+        if (!ccx(rpx)) {
+          buf[(x - xm)*(yn - ym + 1)*3 + (y - ym)*3 + 0] = ccr(rpx);
+          buf[(x - xm)*(yn - ym + 1)*3 + (y - ym)*3 + 1] = ccg(rpx);
+          buf[(x - xm)*(yn - ym + 1)*3 + (y - ym)*3 + 2] = ccb(rpx);
         }
       }
     }
@@ -382,14 +410,27 @@ void memsett(void* arg, uchar x, uint n) {
 
 // assumes called from drawSprites, with accompanying conditions
 void drawAllActorsInRange(uchar xm, uchar xn, uchar ym, uchar yn) {
-  uchar buf[xn - xm + 1][yn - ym + 1][3] = {{{0}}};
+  bool db = 0;
+  uchar buf[xn - xm + 1][yn - ym + 1][3];
   memsett(buf, 0, sizeof(buf));
 
   drawOneActorInRange(&player, (uchar*)buf, xm, xn, ym, yn);
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     drawOneActorInRange(&bullets[i], (uchar*)buf, xm, xn, ym, yn);
   }
-  
+  if (db) {
+    serial_println("--DAAIR--");
+    for (uchar y = ym; y <= yn; y++) {
+      serial_print(y); serial_print("| ");
+      for (uchar x = xn; x >= xm && x < 255; x--) {
+        serial_print(x); serial_print(": ");
+        serial_print(buf[x - xm][y - ym][2]); serial_print(" ");
+        serial_print(buf[x - xm][y - ym][1]); serial_print(" ");
+        serial_print(buf[x - xm][y - ym][0]); serial_print(" ");
+      }
+      serial_println("");
+    }
+  }
   SREG &= 0x7F;
   spic4(CASET, 0, g2sx(xn), 0, g2sx(xm));
   spic4(RASET, 0, g2sy(ym), 0, g2sy(yn));
@@ -404,7 +445,8 @@ void drawAllActorsInRange(uchar xm, uchar xn, uchar ym, uchar yn) {
   SREG |= 0x80;
 }
 
-void drawActor(Actor* a) {
+void drawActor(Actor* a, bool db = 0) {
+  //bool db = 0;
   uchar w, h, xm, xn, ym, yn;
   if (a->needsRedraw) {
     w = spritesW(a->s);
@@ -414,12 +456,14 @@ void drawActor(Actor* a) {
       xn = a->x + w - 1;
       ym = a->y;
       yn = a->y + h - 1;
-      serial_print(w); serial_print(" ");
-      serial_print(h); serial_print(" ");
-      serial_print(xm); serial_print(" ");
-      serial_print(xn); serial_print(" ");
-      serial_print(ym); serial_print(" ");
-      serial_println(yn);
+      if (db) {
+        serial_print(w); serial_print(" ");
+        serial_print(h); serial_print(" ");
+        serial_print(xm); serial_print(" ");
+        serial_print(xn); serial_print(" ");
+        serial_print(ym); serial_print(" ");
+        serial_println(yn);
+      }
       SREG &= 0x7F;
       spic4(CASET, 0, g2sx(xn), 0, g2sx(xm));
       spic4(RASET, 0, g2sy(ym), 0, g2sy(yn));
@@ -427,12 +471,12 @@ void drawActor(Actor* a) {
       for (uchar y = ym; y <= yn; y++) {
         for (uchar x = xn; x >= xm && x < 255; x--) {
           uint rpx = getspx(a->s, x - a->x, y - a->y);
-          serial_print(x); serial_print("#");
-          serial_print(y); serial_print("#");
-          serial_print(ccx(rpx)); serial_print("#");
-          serial_print(ccr(rpx)); serial_print("#");
-          serial_print(ccg(rpx)); serial_print("#");
-          serial_println(ccb(rpx));
+          // serial_print(x); serial_print("#");
+          // serial_print(y); serial_print("#");
+          // serial_print(ccx(rpx)); serial_print("#");
+          // serial_print(ccr(rpx)); serial_print("#");
+          // serial_print(ccg(rpx)); serial_print("#");
+          // serial_println(ccb(rpx));
           spid(ccb(rpx) << 2);
           spid(ccg(rpx) << 2);
           spid(ccr(rpx) << 2);
@@ -454,6 +498,13 @@ void drawActor(Actor* a) {
         if (xn > a->xp + w - 1) xn = a->xp + w - 1;
         if (ym < a->yp) ym = a->yp;
         if (yn > a->yp + h - 1) yn = a->yp + h - 1;
+
+        if (db) {
+          serial_print(xm); serial_print(" $ ");
+          serial_print(xn); serial_print(" $ ");
+          serial_print(ym); serial_print(" $ ");
+          serial_println(yn);
+        }
         drawAllActorsInRange(xm, xn, ym, yn);
       }
       if (a->yp != a->y) {
@@ -475,10 +526,23 @@ void drawActor(Actor* a) {
         if (xn > a->xp + w - 1) xn = a->xp + w - 1;
         if (ym < a->yp) ym = a->yp;
         if (yn > a->yp + h - 1) yn = a->yp + h - 1;
+        
+        if (db) {
+          serial_print(xm); serial_print(" $ ");
+          serial_print(xn); serial_print(" $ ");
+          serial_print(ym); serial_print(" $ ");
+          serial_println(yn);
+        }
         drawAllActorsInRange(xm, xn, ym, yn);
       }
     } else {
-      drawAllActorsInRange(a->x, a->xp + w - 1, a->y, a->y + h - 1);
+      if (db) {
+        serial_print(a->xp); serial_print(" $ ");
+        serial_print(a->xp + w - 1); serial_print(" $ ");
+        serial_print(a->yp); serial_print(" $ ");
+        serial_println(a->yp + h - 1);
+      }
+      drawAllActorsInRange(a->xp, a->xp + w - 1, a->yp, a->yp + h - 1);
     }
 
     a->needsRedraw = 0;
@@ -493,7 +557,8 @@ void drawSprites() {
 }
 
 void draw() {
-  drawText();
+  if (!gameNeedsClearing)
+    drawText();
   if (gameActive || gameNeedsClearing) {
     drawSprites();
   }

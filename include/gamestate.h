@@ -22,6 +22,7 @@ extern uchar menuOption;
 extern uint gameTime;
 extern bool gameActive;
 extern bool gameNeedsClearing;
+extern bool gameForcedReset;
 extern ushort score;
 extern uchar superMeter;
 

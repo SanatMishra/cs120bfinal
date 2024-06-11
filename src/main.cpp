@@ -169,14 +169,21 @@ int TickGameEngine(int state) {
         serial_println(score);
         newTrack(0);
         endGame();
-        if (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score) {
+        if (gameForcedReset) {
           clearGameScreen();
-          initEnterScreen();
-          state = GE_ENTER_HS;
+          initMenuScreen();
+          gameForcedReset = 0;
+          state = GE_MENU;
         } else {
-          clearGameScreen();
-          initGameOverScreen();
-          state = GE_GAMEOVER;
+          if (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score) {
+            clearGameScreen();
+            initEnterScreen();
+            state = GE_ENTER_HS;
+          } else {
+            clearGameScreen();
+            initGameOverScreen();
+            state = GE_GAMEOVER;
+          }
         }
       } else {
         state = GE_GAMEPLAY;
@@ -327,7 +334,7 @@ int TickLCDWrite(int state) {
       //  serial_println(textc[i]);
       //}
       draw();
-      if (gameActive)
+      if (gameActive || gameNeedsClearing)
         emptyGraveyard();
       break;
     default: break;
@@ -338,14 +345,15 @@ int TickLCDWrite(int state) {
 void initSMAS() {
   gameActive = 0;
   gameNeedsClearing = 0;
+  gameForcedReset = 0;
   player.pa = player.na = 2;
-  // bullets = ActorList<Bullet, MAX_BULLETS>();
-  bullets.actb = bullets.acte = MAX_BULLETS;
-  bullets.actfb = 0;
-  for (uchar i = 0; i < MAX_BULLETS; i++) {
-    bullets[i].na = i + 1;
-    bullets[i].pa = MAX_BULLETS + 1;
-  }
+  // bullets = ActorList<Bullet, MAX_BULLETS>;
+  // bullets.actb = bullets.acte = MAX_BULLETS;
+  // bullets.actfb = 0;
+  // for (uchar i = 0; i < MAX_BULLETS; i++) {
+  //   bullets[i].na = i + 1;
+  //   bullets[i].pa = MAX_BULLETS + 1;
+  // }
 }
 
 void predraw() {
@@ -379,7 +387,7 @@ int main(void) {
 
   loadHSEntries();    // Load high scores from EEPROM
   initializeTracks(); // Initialize music tracks
-  initScreen();        // Init text array
+  initScreen();       // Init text array
   initSMAS();         // Init variables persistent across games
   st_init();          // Initialize music PWM
   ADC_init();         // Initializes ADC

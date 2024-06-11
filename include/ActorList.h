@@ -8,7 +8,7 @@ class ActorList {
 public:
   // static array of actors. each actor maintains forward and back pointers (na, pa), 
   // so we can run a doubly-linked ring of actors from MAX_ACTORS to actb to acte to 
-  // MAX_ACTORS. Actors that have not been yet assigned are entered into a stack starting
+  // MAX_ACTORS. Actors that have not yet been assigned are entered into a stack starting
   // at actfb, to all other free elements and finally to MAX_ACTORS. For the free stack, 
   // only the forward pointer (na) is maintained. Upon actor creation, actfb is inserted
   // in between acte and MAX_ACTORS, acte is set to actfb, and actfb is set to the next 
