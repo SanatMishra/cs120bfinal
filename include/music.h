@@ -12,28 +12,23 @@ inline constexpr float c1freq = 32.703203125;
 inline constexpr uint MAXTONES = 124;
 inline constexpr uint NUM_TRACKS = 2;
 
+extern ushort tones[MAXTONES];
+
 // tone length * speed MUST be longer than notebreak
 typedef struct track {
   uint numTones;
   ushort speed;
-  ushort notebreak;
   uchar key;
   uchar loop;
-  ushort track[MAXTONES];
+  ushort tonei;
 } track;
+
 extern track tracks[NUM_TRACKS];
 
-extern uint curTrackI;
-extern uchar curToneI;
-extern ushort curTone;
-extern uchar beepNote;
-extern uchar beepDur;
-
-float getFreq(uchar note);
 void st_init();
-void stone(float freq);
 void newTrack(uint arg);
 void queueBeep(uchar note, uchar len);
 void initializeTracks();
+void advanceMusic();
 
 #endif //_MUSICH_

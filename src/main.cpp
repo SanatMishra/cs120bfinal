@@ -287,29 +287,7 @@ int TickBuzzWrite(int state) {
   switch (state) {
     case BW_INIT: break;
     case BW_WRITE:
-      if (curToneI == tracks[curTrackI].numTones && beepDur == 0) {
-        stone(getFreq(0));
-        break;
-      }
-      if (beepDur > 0) {
-        outNote = beepNote;
-        beepDur--;
-      } else {
-        outNote = t2n(curTone);
-      }
-      if (curToneI != tracks[curTrackI].numTones) {
-        if (t2d(curTone) != 0x1FF) {
-          curTone = d2t(curTone, t2d(curTone) - 1);
-        }
-        if (t2d(curTone) == 0) {
-          curToneI++;
-          if (curToneI == tracks[curTrackI].numTones && tracks[curTrackI].loop)
-            curToneI = 0;
-          if (curToneI != tracks[curTrackI].numTones)
-            curTone = tracks[curTrackI].track[curToneI];
-        }
-      }
-      stone(getFreq(outNote));
+      advanceMusic();
       break;
     default:
       break;
