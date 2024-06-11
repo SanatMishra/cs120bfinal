@@ -60,12 +60,12 @@ void initializeTracks() {
   uchar i;
 
   i = 0;
-  tracks[0].key = 0;
-  tracks[0].speed = 1;
+  tracks[0].key = 35;
+  tracks[0].speed = 7;
   tracks[0].numTones = 0;
   tracks[0].loop = 0;
   tracks[0].tonei = 0;
-  t0(1);
+  tn(7, 3); tn(7, 1); tn(7, 1); tn(7, 1); tn(12, 3);
 
   i = 1;
   tracks[1].key = 30;
@@ -92,6 +92,22 @@ void initializeTracks() {
   tn(5,1); tn(8,1); tn(7,1); tn(2,1);
   tn(-1,1); tn(0,1); tn(2,1); tn(3,1);
   tn(5,2);           tn(2,2);
+
+  i = 2;
+  tracks[2].key = 30;
+  tracks[2].speed = 5;
+  tracks[2].numTones = 0;
+  tracks[2].loop = 0;
+  tracks[2].tonei = tracks[1].tonei + tracks[1].numTones;
+  tn(12, 6); tn(11, 1); tn(9, 1); tn(8, 5);
+
+  i = 3;
+  tracks[3].key = 42;
+  tracks[3].speed = 7;
+  tracks[3].numTones = 0;
+  tracks[3].loop = 0;
+  tracks[3].tonei = tracks[2].tonei + tracks[2].numTones;
+  tn(-2, 1); tn(-1, 1); tn(0, 1); tn(-2, 1); tn(-1, 1); tn(0, 1); tn(-2, 1); tn(-1, 1); tn(0, 1);
 }
 
 void advanceMusic() {
