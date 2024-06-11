@@ -25,6 +25,7 @@ extern bool gameNeedsClearing;
 extern bool gameForcedReset;
 extern ushort score;
 extern uchar superMeter;
+extern uchar playerHP;
 
 typedef struct Actor {
   float xt, yt;
@@ -36,13 +37,25 @@ typedef struct Actor {
 } Actor;
 
 typedef struct Bullet : public Actor {
-  float v;
+  float vx, vy;
 } Bullet;
 
-#define MAX_BULLETS 10
+typedef struct Enemy : public Actor {
+  uchar type, state;
+  ushort tsf;
+} Enemy;
+
+#define MAX_BULLETS 5
+#define MAX_ENEMIES 3
+
+#define PLAYER_SPRITENO 0
+#define BULLET_SPRITENO 1
+#define ENEMY_SPRITENO  2
+#define NUM_ENEMY_TYPES 1
 
 extern Actor player;
 extern ActorList<Bullet, MAX_BULLETS> bullets;
+extern ActorList<Enemy, MAX_ENEMIES> enemies;
 
 void initMenuScreen();
 void updateMenuScreen();

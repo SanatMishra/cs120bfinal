@@ -12,11 +12,14 @@ uint gameTime;
 bool gameActive;
 bool gameNeedsClearing;
 bool gameForcedReset;
+uchar playerHP;
 ushort score;
 uchar superMeter;
+ushort newEnemyChance;
 
 Actor player;
 ActorList<Bullet, MAX_BULLETS> bullets;
+ActorList<Enemy, MAX_ENEMIES> enemies;
 
 char enterHSuname[12];
 uchar ehscx, ehscy, ehscp;
@@ -95,6 +98,8 @@ void initGame() {
   gameActive = 1;
   superMeter = 0;
   score = 0;
+  playerHP = 3;
+  newEnemyChance = 0;
 
   player.w = player.h = 8;
   player.xt = 0.5*(GXMIN + GXMAX - player.w + 1);
@@ -102,11 +107,11 @@ void initGame() {
   player.xp = player.x = uround(player.xt);
   player.yp = player.y = uround(player.yt);
   player.alive = 1;
-  player.s = 0;
+  player.s = PLAYER_SPRITENO;
   player.needsRedraw = 1;
 }
 
-void newBullet(float xt, float yt, float v) {
+void newBullet(float xt, float yt, float vx, float vy) {
   uchar bi = bullets.addActor();
   if (bi < MAX_BULLETS) {
     bullets[bi].w = 2; bullets[bi].h = 3;
@@ -115,9 +120,10 @@ void newBullet(float xt, float yt, float v) {
     bullets[bi].xp = bullets[bi].x = uround(bullets[bi].xt);
     bullets[bi].yp = bullets[bi].y = uround(bullets[bi].yt);
     bullets[bi].alive = 1;
-    bullets[bi].s = 2;
+    bullets[bi].s = BULLET_SPRITENO;
     bullets[bi].needsRedraw = 1;
-    bullets[bi].v = v;
+    bullets[bi].vx = vx;
+    bullets[bi].vy = vy;
   }
 }
 
@@ -153,14 +159,27 @@ void setXPYP() {
     bullets[i].xp = bullets[i].x;
     bullets[i].yp = bullets[i].y;
   }
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    enemies[i].xp = enemies[i].x;
+    enemies[i].yp = enemies[i].y;
+  }
 }
 
 void bulletsMove() {
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
-    if (moveWithinBounds(&bullets[i], 0, bullets[i].v) != 4) {
+    if (moveWithinBounds(&bullets[i], bullets[i].vx, bullets[i].vy) != 4) {
       bullets[i].alive = 0;
       bullets[i].needsRedraw = 1;
     }
+  }
+}
+
+void enemiesMove() {
+  for (uchar i = bullets.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    // if (moveWithinBounds(&enemies[i], enemies[i].vx, bullets[i].vy) != 4) {
+    //   enemies[i].alive = 0;
+    //   enemies[i].needsRedraw = 1;
+    // }
   }
 }
 
@@ -170,21 +189,35 @@ void playerMoves() {
   }
 }
 
-void updateGame() {
-  setXPYP();
-  if (bt_up && sw_up) {
-    gameActive = 0;
-    score = 0;
-    gameForcedReset = 1;
-    return;
+void newEnemy() {
+  uchar ei = enemies.addActor();
+  if (ei < MAX_ENEMIES) {
+    uchar theType = rr() % NUM_ENEMY_TYPES;
+    enemies[ei].w = enemies[ei].h = 8;
+    enemies[ei].xt = GXMIN + rr() % (GXMAX - GXMIN - enemies[ei].w + 2);
+    enemies[ei].yt = (GYMIN + GYMAX)/2 + rr() % ((uint)(GYMAX - (GYMIN + GYMAX)/2 - enemies[ei].h + 2));
+    enemies[ei].xp = enemies[ei].x = uround(enemies[ei].xt);
+    enemies[ei].yp = enemies[ei].y = uround(enemies[ei].yt);
+    enemies[ei].alive = 1;
+    enemies[ei].s = ENEMY_SPRITENO + theType;;
+    enemies[ei].needsRedraw = 1;
+    enemies[ei].type = theType;
+    enemies[ei].state = 0;
+    enemies[ei].tsf = 0;
   }
-  bulletsMove();
-  playerMoves();
-  if (!gameActive)
-    return;
+}
 
+void genEnemyCheck() {
+  newEnemyChance += (ushort)(calibrate(300, 0, 0, MAX_ENEMIES, enemies.n));
+  if (rr() % 10000 < newEnemyChance) {
+    newEnemyChance = 0;
+    newEnemy();
+  }
+}
+
+void playerFires() {
   if (bt_up && gameTime > 0) {
-    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 1);
+    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0, 1);
     for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
       serial_print(bullets[i].x); serial_print("^");
       serial_print(bullets[i].y); serial_print("^");
@@ -192,7 +225,9 @@ void updateGame() {
       serial_println(bullets[i].na);
     }
   }
+}
 
+void checkNeedsRedraw() {
   if (player.x != player.xp || player.y != player.yp) {
     /*serial_print("nx="); serial_print(nx); serial_print(" ny="); serial_print(ny);
     serial_print(" jx="); serial_print(jx); serial_print(" jy="); serial_println(jy);
@@ -208,6 +243,28 @@ void updateGame() {
     if(bullets[i].x != bullets[i].xp || bullets[i].y != bullets[i].yp)
       bullets[i].needsRedraw = 1;
   }
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    if(enemies[i].x != enemies[i].xp || enemies[i].y != enemies[i].yp)
+      enemies[i].needsRedraw = 1;
+  }
+}
+
+void updateGame() {
+  setXPYP();
+  if (bt_up && sw_up) {
+    gameActive = 0;
+    score = 0;
+    gameForcedReset = 1;
+    return;
+  }
+  genEnemyCheck();
+  bulletsMove();
+  playerMoves();
+  if (!gameActive)
+    return;
+  playerFires();
+
+  checkNeedsRedraw();
 
   if (score < 9999) score++;
   if (superMeter < 100) superMeter++;
@@ -222,6 +279,10 @@ void endGame() {
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     bullets[i].alive = 0;
     bullets[i].needsRedraw = 1;
+  }
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    enemies[i].alive = 0;
+    enemies[i].needsRedraw = 1;
   }
   gameNeedsClearing = 1;
   superMeter = 0;
@@ -418,19 +479,22 @@ void drawAllActorsInRange(uchar xm, uchar xn, uchar ym, uchar yn) {
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     drawOneActorInRange(&bullets[i], (uchar*)buf, xm, xn, ym, yn);
   }
-  if (db) {
-    serial_println("--DAAIR--");
-    for (uchar y = ym; y <= yn; y++) {
-      serial_print(y); serial_print("| ");
-      for (uchar x = xn; x >= xm && x < 255; x--) {
-        serial_print(x); serial_print(": ");
-        serial_print(buf[x - xm][y - ym][2]); serial_print(" ");
-        serial_print(buf[x - xm][y - ym][1]); serial_print(" ");
-        serial_print(buf[x - xm][y - ym][0]); serial_print(" ");
-      }
-      serial_println("");
-    }
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    drawOneActorInRange(&enemies[i], (uchar*)buf, xm, xn, ym, yn);
   }
+  // if (db) {
+  //   serial_println("--DAAIR--");
+  //   for (uchar y = ym; y <= yn; y++) {
+  //     serial_print(y); serial_print("| ");
+  //     for (uchar x = xn; x >= xm && x < 255; x--) {
+  //       serial_print(x); serial_print(": ");
+  //       serial_print(buf[x - xm][y - ym][2]); serial_print(" ");
+  //       serial_print(buf[x - xm][y - ym][1]); serial_print(" ");
+  //       serial_print(buf[x - xm][y - ym][0]); serial_print(" ");
+  //     }
+  //     serial_println("");
+  //   }
+  // }
   SREG &= 0x7F;
   spic4(CASET, 0, g2sx(xn), 0, g2sx(xm));
   spic4(RASET, 0, g2sy(ym), 0, g2sy(yn));
@@ -554,6 +618,9 @@ void drawSprites() {
   for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
     drawActor(&bullets[i]);
   }
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    drawActor(&enemies[i]);
+  }
 }
 
 void draw() {
@@ -571,6 +638,12 @@ void emptyGraveyard() {
     ni = bullets[i].na;
     if (!bullets[i].alive) {
       bullets.deleteActor(i);
+    }
+  }
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = ni) {
+    ni = enemies[i].na;
+    if (!enemies[i].alive) {
+      enemies.deleteActor(i);
     }
   }
   if (gameNeedsClearing)

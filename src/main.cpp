@@ -10,6 +10,9 @@
 #include "gamestate.h"
 #include <string.h>
 #include <stdio.h>
+
+uint RSEED;
+
 //#define NUM_TASKS 4
 constexpr int NUM_TASKS = 4;
 
@@ -119,7 +122,6 @@ int TickReadInput(int state) {
   }
   return state;
 }
-
 
 bool toPrint;
 
@@ -347,13 +349,14 @@ void initSMAS() {
   gameNeedsClearing = 0;
   gameForcedReset = 0;
   player.pa = player.na = 2;
-  // bullets = ActorList<Bullet, MAX_BULLETS>;
+  // bullets = ActorList<Bullet, MAX_BULLETS>();
   // bullets.actb = bullets.acte = MAX_BULLETS;
   // bullets.actfb = 0;
   // for (uchar i = 0; i < MAX_BULLETS; i++) {
   //   bullets[i].na = i + 1;
   //   bullets[i].pa = MAX_BULLETS + 1;
   // }
+  // bullets.n = 0;
 }
 
 void predraw() {
@@ -385,12 +388,14 @@ int main(void) {
   DDRD  = 0b11101111;
   PORTD = 0b00010000;
 
+  ADC_init();         // Initializes ADC
+  RSEED = ADC_read(5) + ADC_read(4) + ADC_read(3) + ADC_read(2) + ADC_read(1) + ADC_read(0);
+  rr(); rr(); rr();   // Initialize RSEED
   loadHSEntries();    // Load high scores from EEPROM
   initializeTracks(); // Initialize music tracks
   initScreen();       // Init text array
   initSMAS();         // Init variables persistent across games
   st_init();          // Initialize music PWM
-  ADC_init();         // Initializes ADC
   SPI_INIT();         // Initializes SPI
   predraw();
   //scString("Start", 5, 6, 8);

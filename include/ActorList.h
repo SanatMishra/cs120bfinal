@@ -17,6 +17,7 @@ public:
   // MAX_ACTORS, no add occurs but the game continues as usual.
   T actors[MAX_ACTORS];
   uchar actb, acte, actfb;
+  uchar n;
 
   ActorList() {
     actb = acte = MAX_ACTORS;
@@ -25,6 +26,7 @@ public:
       actors[i].na = i + 1;
       actors[i].pa = MAX_ACTORS + 1;
     }
+    n = 0;
   }
 
   const T& operator[](int i) const { return actors[i]; }
@@ -50,6 +52,7 @@ public:
       actors[actb].pa = MAX_ACTORS;
       actors[actb].na = MAX_ACTORS;
   }
+  n++;
   return actfbOrig;
 }
   void deleteActor(uchar x) {
@@ -68,6 +71,7 @@ public:
   actors[x].na = actfb;
   actors[x].pa = MAX_ACTORS + 1;
   actfb = x;
+  n--;
 }
 
 };

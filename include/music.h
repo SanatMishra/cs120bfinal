@@ -9,7 +9,7 @@
 #define n2t(x,y) ( ((x) & 0xFF80) | ((y) & 0x7F) )
 #define d2t(x,y) ( ((x) & 0x7F) | (((y) << 7) & 0xFF80) )
 inline constexpr float c1freq = 32.703203125;
-inline constexpr uint MAXTONES = 128;
+inline constexpr uint MAXTONES = 124;
 inline constexpr uint NUM_TRACKS = 2;
 
 // tone length * speed MUST be longer than notebreak
