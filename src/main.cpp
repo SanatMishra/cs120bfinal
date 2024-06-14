@@ -13,6 +13,13 @@
 
 uint RSEED;
 
+uint rr() {
+	RSEED += 3000000019;
+	RSEED ^= RSEED << 21 | RSEED >> 11;
+	RSEED += 2000000011;
+	return RSEED;
+}
+
 //#define NUM_TASKS 4
 constexpr int NUM_TASKS = 4;
 
@@ -281,8 +288,6 @@ int TickBuzzWrite(int state) {
     default:
       break;
   }
-  
-  uchar outNote;
 
   switch (state) {
     case BW_INIT: break;

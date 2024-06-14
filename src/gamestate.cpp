@@ -13,6 +13,7 @@ bool gameActive;
 bool gameNeedsClearing;
 bool gameForcedReset;
 uchar playerHP;
+uchar playerInvuln;
 ushort score;
 uchar superMeter;
 ushort newEnemyChance;
@@ -79,12 +80,18 @@ void printGSMeters() {
 
   for (uchar i = 0; i < uround(superMeter/10.0); i++)
     scChar('#', 6 + i, 0);
+
+  for (uchar i = 0; i < 3; i++)
+    scChar(i < playerHP ? '#' : ' ', 13 + i, 15);
+  
+  scColorString(5, 11, 15, playerHP > 1 ? 2 : 1);
 }
 
 void initGameScreen() {
   scString("Score:", 6, 0, 15);
   scString("High: ", 6, 0, 14);
   scString("Super ", 6, 0, 0);
+  scString("HP", 2, 11, 15);
 
   printGSMeters();
 }
@@ -99,6 +106,7 @@ void initGame() {
   superMeter = 0;
   score = 0;
   playerHP = 3;
+  playerInvuln = 0;
   newEnemyChance = 0;
 
   player.w = player.h = 8;
@@ -111,7 +119,8 @@ void initGame() {
   player.needsRedraw = 1;
 }
 
-void newBullet(float xt, float yt, float vx, float vy) {
+uchar newBullet(float xt, float yt, float vx, float vy, uchar own) {
+  if (xt < 0 || yt < 0 || xt >= GXMAX || yt >= GYMAX) return MAX_BULLETS;
   uchar bi = bullets.addActor();
   if (bi < MAX_BULLETS) {
     bullets[bi].w = 2; bullets[bi].h = 3;
@@ -124,7 +133,9 @@ void newBullet(float xt, float yt, float vx, float vy) {
     bullets[bi].needsRedraw = 1;
     bullets[bi].vx = vx;
     bullets[bi].vy = vy;
+    bullets[bi].own = own;
   }
+  return bi;
 }
 
 uchar moveWithinBounds(Actor* a, float vx, float vy) {
@@ -174,8 +185,71 @@ void bulletsMove() {
   }
 }
 
+bool singleCollision(Actor* a, Actor* b, float oax = 0, float oay = 0, float obx = 0, float oby = 0) {
+  float bxm = b->x + obx;
+  float bxn = b->x + obx + b->w;
+  float bym = b->y + oby;
+  float byn = b->y + oby + b->h;
+
+  float axm = a->x + oax;
+  float axn = a->x + oax + a->w;
+  float aym = a->y + oay;
+  float ayn = a->y + oay + a->h;
+
+  return axn >= bxm && axm <= bxn && ayn >= bym && aym <= byn;
+}
+
+bool detectBullet(uchar x) {
+  if (rr() % 1500 >= gameTime + 250) return false;
+  //serial_print("detect "); serial_print(x); serial_print(" ");
+  uchar dbtime = 10;
+  float oax, oay;
+  switch(enemies[x].state) {
+    case 0:
+      oax = dbtime; oay = 0;
+      break;
+    case 255:
+      oax = -dbtime; oay = 0;
+      break;
+    case 1:
+      oax = 0; oay = -dbtime;
+      break;
+    case 254:
+      oax = 0; oay = dbtime;
+    default: break;
+  }
+  for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
+    if (bullets[i].own == 0 && singleCollision(&enemies[x], &bullets[i], oax, oay, dbtime*bullets[i].vx, dbtime*bullets[i].vy))
+      return true;
+  }
+  return false;
+}
+
 void enemiesMove() {
-  for (uchar i = bullets.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    switch(enemies[i].state) {
+      case 0: 
+        if (detectBullet(i) || moveWithinBounds(&enemies[i], 1, 0) == 5) {
+          enemies[i].state = 255;
+        }
+        break;
+      case 255:
+        if (detectBullet(i) || moveWithinBounds(&enemies[i], -1, 0) == 3) {
+          enemies[i].state = 0;
+        }
+        break;
+      case 1:
+        if (detectBullet(i) || moveWithinBounds(&enemies[i], 0, -1) == 1) {
+          enemies[i].state = 254;
+        }
+        break;
+      case 254:
+        if (detectBullet(i) || moveWithinBounds(&enemies[i], 0, 1) == 7) {
+          enemies[i].state = 1;
+        }
+        break;
+      default: break;
+    }
     // if (moveWithinBounds(&enemies[i], enemies[i].vx, bullets[i].vy) != 4) {
     //   enemies[i].alive = 0;
     //   enemies[i].needsRedraw = 1;
@@ -189,7 +263,11 @@ void playerMoves() {
   }
 }
 
-void newEnemy() {
+uchar fireCooldown() {
+  return 80 + rr() % 41;
+}
+
+uchar newEnemy() {
   uchar ei = enemies.addActor();
   if (ei < MAX_ENEMIES) {
     uchar theType = rr() % NUM_ENEMY_TYPES;
@@ -199,12 +277,12 @@ void newEnemy() {
     enemies[ei].xp = enemies[ei].x = uround(enemies[ei].xt);
     enemies[ei].yp = enemies[ei].y = uround(enemies[ei].yt);
     enemies[ei].alive = 1;
-    enemies[ei].s = ENEMY_SPRITENO + theType;;
+    enemies[ei].s = ENEMY_SPRITENO + theType;
     enemies[ei].needsRedraw = 1;
-    enemies[ei].type = theType;
-    enemies[ei].state = 0;
-    enemies[ei].tsf = 0;
+    enemies[ei].state = theType;
+    enemies[ei].tsf = rr() % 100;
   }
+  return ei;
 }
 
 void genEnemyCheck() {
@@ -217,12 +295,33 @@ void genEnemyCheck() {
 
 void playerFires() {
   if (bt_up && gameTime > 0) {
-    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0, 1);
-    for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
-      serial_print(bullets[i].x); serial_print("^");
-      serial_print(bullets[i].y); serial_print("^");
-      serial_print(bullets[i].pa); serial_print("^");
-      serial_println(bullets[i].na);
+    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0, 1, 0);
+  }
+}
+
+void enemiesFire() {
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    if (enemies[i].tsf == 0) {
+      float xt, yt, vx, vy;
+      bool dir;
+      switch(enemies[i].state) {
+        case 0: case 255:
+          xt = enemies[i].x + 0.5*(enemies[i].w - 2); yt = enemies[i].y  - 3; vx = 0; vy = -3;
+          break;
+        case 1: case 254:
+          dir = enemies[i].xt < player.xt;
+          xt = dir ? enemies[i].x + enemies[i].w : enemies[i].x - 2;
+          yt = enemies[i].y + 0.5*(enemies[i].h - 3);
+          vx = dir ? 3 : -3;
+          vy = 0;
+          break;
+        default:
+          xt = yt = vx = vy = -1; // fail bullet creation
+      }
+      if (newBullet(xt, yt, vx, vy, 1) < MAX_BULLETS)
+        enemies[i].tsf = fireCooldown();
+    } else {
+      enemies[i].tsf--;
     }
   }
 }
@@ -249,6 +348,50 @@ void checkNeedsRedraw() {
   }
 }
 
+void playerBulletCollision() {
+  for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
+    for (uchar j = enemies.actb; j < MAX_ENEMIES; j = enemies[j].na) {
+      if (bullets[i].alive && bullets[i].own == 0 && enemies[j].alive && singleCollision(&enemies[j], &bullets[i])) {
+        enemies[j].alive = 0;
+        enemies[j].needsRedraw = 1;
+        bullets[i].alive = 0;
+        bullets[i].needsRedraw = 1;
+        if (score < 9999) score++;
+      }
+    }
+  }
+}
+
+void damagePlayer() {
+  playerHP--;
+  if (playerHP == 0) {
+    gameActive = 0;
+    return;
+  }
+  playerInvuln = BLINKDUR;
+  player.needsRedraw = 1;
+}
+
+void enemyBulletCollision() {
+  for (uchar i = bullets.actb; i < MAX_BULLETS; i = bullets[i].na) {
+    if (bullets[i].alive && bullets[i].own == 1 && !playerInvuln && singleCollision(&player, &bullets[i])) {
+      damagePlayer();
+      if (!gameActive) return;
+      bullets[i].alive = 0;
+      bullets[i].needsRedraw = 1;
+    }
+  }
+}
+
+void enemyPlayerCollision() {
+  for (uchar i = enemies.actb; i < MAX_ENEMIES; i = enemies[i].na) {
+    if (enemies[i].alive && !playerInvuln && singleCollision(&player, &enemies[i])) {
+      damagePlayer();
+      if (!gameActive) return;
+    }
+  }
+}
+
 void updateGame() {
   setXPYP();
   if (bt_up && sw_up) {
@@ -260,15 +403,22 @@ void updateGame() {
   genEnemyCheck();
   bulletsMove();
   playerMoves();
-  if (!gameActive)
-    return;
+  if (!gameActive) return;
   playerFires();
-
+  enemiesMove();
+  enemiesFire();
+  playerBulletCollision();
+  enemyBulletCollision();
+  if (!gameActive) return;
+  enemyPlayerCollision();
   checkNeedsRedraw();
 
-  if (score < 9999) score++;
+  //if (score < 9999) score++;
   if (superMeter < 100) superMeter++;
   gameTime++;
+  if (playerInvuln == 1 || (BLINKDUR - playerInvuln) % BLINKSPEED == 0)
+    player.needsRedraw = 1;
+  if (playerInvuln > 0) playerInvuln--;
   printGSMeters();
 }
 
@@ -512,6 +662,7 @@ void drawAllActorsInRange(uchar xm, uchar xn, uchar ym, uchar yn) {
 void drawActor(Actor* a, bool db = 0) {
   //bool db = 0;
   uchar w, h, xm, xn, ym, yn;
+  bool flash = (a == &player) && playerInvuln && (BLINKDUR - playerInvuln - 1) % (2*BLINKSPEED) < BLINKSPEED;
   if (a->needsRedraw) {
     w = spritesW(a->s);
     h = spritesH(a->s);
@@ -534,7 +685,7 @@ void drawActor(Actor* a, bool db = 0) {
       spic(RAMWR);
       for (uchar y = ym; y <= yn; y++) {
         for (uchar x = xn; x >= xm && x < 255; x--) {
-          uint rpx = getspx(a->s, x - a->x, y - a->y);
+          uint rpx = flash ? cclear : getspx(a->s, x - a->x, y - a->y);
           // serial_print(x); serial_print("#");
           // serial_print(y); serial_print("#");
           // serial_print(ccx(rpx)); serial_print("#");

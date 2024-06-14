@@ -30,10 +30,10 @@ typedef struct Sprite {
   uchar h;
 } Sprite;
 
-#define LEN_SPRITEDATA (34)
-inline constexpr uchar spriteDataPGM[LEN_SPRITEDATA] PROGMEM = {1, 64, 1, 64, 193, 67, 193, 67, 133, 82, 134, 146, 150, 150, 42, 168, 85, 80, 85, 85, 64, 1, 72, 33, 24, 36, 16, 4, 4, 16, 4, 16, 1, 64};
-#define NUM_SPRITES (3)
-inline constexpr Sprite spritesPGM[NUM_SPRITES] PROGMEM = {{{16777216, 986943, 789294, 4129539}, 0, 8, 8}, {{16777216, 2047807, 16777216, 16777216}, 16, 2, 3}, {{16777216, 4129539, 212739, 0}, 18, 8, 8}};
+#define LEN_SPRITEDATA (50)
+inline constexpr uchar spriteDataPGM[LEN_SPRITEDATA] PROGMEM = {1, 64, 1, 64, 193, 67, 193, 67, 133, 82, 134, 146, 150, 150, 42, 168, 85, 80, 85, 85, 64, 1, 20, 20, 1, 64, 2, 128, 11, 224, 11, 224, 2, 128, 85, 85, 64, 1, 72, 33, 24, 36, 16, 4, 4, 16, 4, 16, 1, 64};
+#define NUM_SPRITES (4)
+inline constexpr Sprite spritesPGM[NUM_SPRITES] PROGMEM = {{{16777216, 986943, 789294, 4129539}, 0, 8, 8}, {{16777216, 2047807, 16777216, 16777216}, 16, 2, 3}, {{16777216, 4136704, 16191, 3292991}, 18, 8, 8}, {{16777216, 4129539, 212739, 0}, 34, 8, 8}};
 
 #define spriteData(i) (pgm_read_byte(&spriteDataPGM[(i)]))
 #define spritesPalette(i, j) (pgm_read_dword(&spritesPGM[(i)].palette[(j)]))

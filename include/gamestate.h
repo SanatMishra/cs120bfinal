@@ -12,6 +12,9 @@
 #define GYMIN (8)
 #define GYMAX ((HEIGHT) - 2*8 - 1)
 
+#define BLINKSPEED (3)
+#define BLINKDUR (15)
+
 inline constexpr char entryChars[4][16] PROGMEM = {{'0','1','2','3','4','5','6','7','8','9',':','A','B','C','D','<'},
                                                    {'E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T'},
                                                    {'U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j'},
@@ -26,6 +29,7 @@ extern bool gameForcedReset;
 extern ushort score;
 extern uchar superMeter;
 extern uchar playerHP;
+extern uchar playerInvuln;
 
 typedef struct Actor {
   float xt, yt;
@@ -38,20 +42,21 @@ typedef struct Actor {
 
 typedef struct Bullet : public Actor {
   float vx, vy;
+  uchar own;
 } Bullet;
 
 typedef struct Enemy : public Actor {
-  uchar type, state;
-  ushort tsf;
+  uchar state;
+  uchar tsf;
 } Enemy;
 
-#define MAX_BULLETS 5
-#define MAX_ENEMIES 3
+#define MAX_BULLETS 10
+#define MAX_ENEMIES 5
 
 #define PLAYER_SPRITENO 0
 #define BULLET_SPRITENO 1
 #define ENEMY_SPRITENO  2
-#define NUM_ENEMY_TYPES 1
+#define NUM_ENEMY_TYPES 2
 
 extern Actor player;
 extern ActorList<Bullet, MAX_BULLETS> bullets;
