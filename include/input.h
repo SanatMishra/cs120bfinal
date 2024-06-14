@@ -26,6 +26,7 @@ extern ushort jx, jy;
 extern uchar jcd, jcd_up,
        jxd, jxd_up, jyd, jyd_up, 
        sw, sw_up, bt, bt_up;
+extern ushort holdTime;
 
 inline constexpr float maxSpeed = 0.6*WIDTH/(1000.0/UNIV_PERIOD); // 60% WIDTH
 inline constexpr float minSpeed = 0.10*maxSpeed; // 10% maxSpeed

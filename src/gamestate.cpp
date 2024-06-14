@@ -27,6 +27,7 @@ uchar ehscx, ehscy, ehscp;
 uchar hspos;
 
 void initMenuScreen() {
+  newTrack(0);
   menuOption = 0;
   scString("Start", 5, 6, 10);
   //scChar('t', 10, 10);
@@ -88,6 +89,7 @@ void printGSMeters() {
 }
 
 void initGameScreen() {
+  newTrack(1);
   scString("Score:", 6, 0, 15);
   scString("High: ", 6, 0, 14);
   scString("Super ", 6, 0, 0);
@@ -446,7 +448,15 @@ void EHSScreenPrintEntries() {
   }
 }
 
+void moveCursor(uchar x, uchar y, uchar nx, uchar ny) {
+  scChar(pgm_read_byte(&(entryChars[y][x])), x, 13 - y, (y == 0 && x == 15 ? 1 : 3));
+  scChar('#', nx, 13 - ny);
+  serial_print(x); serial_print(" "); serial_print(y); serial_print(" "); serial_print(13 - y); serial_print(" ");
+  serial_print(nx); serial_print(" "); serial_print(ny); serial_print(" "); serial_println(13 - ny);
+}
+
 void initEnterScreen() {
+  newTrack(3);
   hspos = addHSEntry("           ", score);
 
   scString("Enter High Score", 16, 0, 15);
@@ -483,18 +493,28 @@ void initEnterScreen() {
       serial_char(text[x][y]);
     }
   }
+  moveCursor(0, 0, 0, 0);
 }
 
 void updateEnterHS() {
-  if (jxd_up == 1) {
-    ehscx = min(15, ehscx + 1);
-  } else if (jxd_up == 2) {
-    ehscx = max(0, ehscx - 1);
+  uchar htu = 5;
+  if (jxd_up == 1 || jxd == 1 && holdTime % htu == 0) {
+    uchar newEhscx = min(15, ehscx + 1);
+    moveCursor(ehscx, ehscy, newEhscx, ehscy);
+    ehscx = newEhscx;
+  } else if (jxd_up == 2 || jxd == 2 && holdTime % htu == 0) {
+    uchar newEhscx = max(1, ehscx) - 1;
+    moveCursor(ehscx, ehscy, newEhscx, ehscy);
+    ehscx = newEhscx;
   }
-  if (jyd_up == 3) {
-    ehscy = max(0, ehscy - 1);
-  } else if (jyd_up == 4) {
-    ehscy = min(3, ehscy + 1);
+  if (jyd_up == 3 || jyd == 3 && holdTime % htu == 0) {
+    uchar newEhscy = max(1, ehscy) - 1;
+    moveCursor(ehscx, ehscy, ehscx, newEhscy);
+    ehscy = newEhscy;
+  } else if (jyd_up == 4 || jyd == 4 && holdTime % htu == 0) {
+    uchar newEhscy = min(3, ehscy + 1);
+    moveCursor(ehscx, ehscy, ehscx, newEhscy);
+    ehscy = newEhscy;
   }
   if (sw_up) {
     if (ehscp > 0 && ehscx == 15 && ehscy == 0) {
@@ -524,6 +544,7 @@ void clearEnterScreen() {
 }
 
 void initGameOverScreen() {
+  newTrack(2);
   scString("GAME OVER", 9, 4, 8);
 }
 

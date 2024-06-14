@@ -52,6 +52,7 @@ uchar jcd, jcd_up,
       sw, sw_up, bt, bt_up;
 float jxi, jyi;
 // ushort jfu95, jfd95, jfr95, jfl95;
+ushort holdTime;
 
 enum RIstates{RI_INIT, RI_READ};
 int TickReadInput(int state) {
@@ -72,6 +73,7 @@ int TickReadInput(int state) {
       jcd = jcd_up = jxd = jxd_up = jyd = jyd_up = 0;
       sw = sw_up = new_sw;
       bt = bt_up = new_bt;
+      holdTime = 0;
       state = RI_READ;
       break;
     case RI_READ:
@@ -115,6 +117,7 @@ int TickReadInput(int state) {
       }
       new_jcd = abs(jx - nx) > abs(jy - ny) ? new_jxd : new_jyd;
       jcd_up = (jcd == new_jcd) ? 0 : new_jcd;
+      holdTime = (new_jcd == 0 ? 0 : ((jcd == new_jcd) ? min(65534, holdTime) + 1 : 1));
       jcd = new_jcd;
       jxd_up = (jxd == new_jxd) ? 0 : new_jxd;
       jxd = new_jxd;
@@ -137,28 +140,19 @@ enum GEstates{GE_INIT, GE_MENU, GE_GAMEPLAY, GE_SUPER, GE_GAMEOVER, GE_ENTER_HS,
 int TickGameEngine(int state) {
   switch (state) {
     case GE_INIT:
-      newTrack(0);
       toPrint = 1;
       initMenuScreen();
       state = GE_MENU;
       break;
     case GE_MENU:
-      if (toPrint) {
-        serial_println("Main Menu");
-        toPrint = 0;
-      }
-
       if (bt_up) {
         queueBeep(68, 7);
         if (menuOption == 0) {
-          newTrack(1);
           initGame();
           clearMenuScreen();
           initGameScreen();
-          toPrint = 1;
           state = GE_GAMEPLAY;
         } else {
-          toPrint = 1;
           clearMenuScreen();
           initHSScreen();
           state = GE_HS;
@@ -169,14 +163,9 @@ int TickGameEngine(int state) {
       break;
     case GE_GAMEPLAY:
       if (toPrint) {
-        serial_println("Playing Game");
         toPrint = 0;
       }
       if (!gameActive) {
-        serial_println("Ending Game");
-        serial_print("Score: ");
-        serial_println(score);
-        newTrack(0);
         endGame();
         if (gameForcedReset) {
           clearGameScreen();
@@ -184,7 +173,7 @@ int TickGameEngine(int state) {
           gameForcedReset = 0;
           state = GE_MENU;
         } else {
-          if (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score) {
+          if (score > 0 && (numHSEntries < MAX_HS_ENTRIES || score > HSEntries[numHSEntries - 1].score)) {
             clearGameScreen();
             initEnterScreen();
             state = GE_ENTER_HS;
@@ -202,14 +191,10 @@ int TickGameEngine(int state) {
       state = GE_GAMEPLAY;
       break;
     case GE_GAMEOVER:
-      if (toPrint) {
-        serial_println("Game Over");
-        toPrint = 0;
-      }
+      
       if (bt_up) {
         menuOption = 0;
         toPrint = 1;
-        newTrack(0);
 
         clearGameOverScreen();
         initMenuScreen();
@@ -219,11 +204,6 @@ int TickGameEngine(int state) {
       }
       break;
     case GE_ENTER_HS:
-      //serial_println("High score! Enter name.");
-      //serial_print("score = "); serial_println(score);
-      //sprintf(enterHSuname, "score%04dXX", score);
-      toPrint = 1;
-
       if (bt_up) {
         writeHSEntries();
         clearEnterScreen();
@@ -234,15 +214,9 @@ int TickGameEngine(int state) {
       }
       break;
     case GE_HS:
-      if (toPrint) {
-        printHSEntriesl();
-        toPrint = 0;
-      }
       
       if (bt_up) {
-        newTrack(0);
         menuOption = 0;
-        toPrint = 1;
 
         clearHSScreen();
         initMenuScreen();
@@ -332,14 +306,6 @@ void initSMAS() {
   gameNeedsClearing = 0;
   gameForcedReset = 0;
   player.pa = player.na = 2;
-  // bullets = ActorList<Bullet, MAX_BULLETS>();
-  // bullets.actb = bullets.acte = MAX_BULLETS;
-  // bullets.actfb = 0;
-  // for (uchar i = 0; i < MAX_BULLETS; i++) {
-  //   bullets[i].na = i + 1;
-  //   bullets[i].pa = MAX_BULLETS + 1;
-  // }
-  // bullets.n = 0;
 }
 
 void predraw() {
@@ -395,12 +361,6 @@ int main(void) {
   tasks[1] = {GE_INIT, UNIV_PERIOD, UNIV_PERIOD, &TickGameEngine};
   tasks[2] = {BW_INIT, BUZZ_PERIOD, BUZZ_PERIOD, &TickBuzzWrite};
   tasks[3] = {LCD_INIT, UNIV_PERIOD, UNIV_PERIOD, &TickLCDWrite};
-
-  //scString("Start", 5, 6, 8);
-  //draw();
-  //newTrack(1);
-  //serial_println(curTone);
-  //queueBeep(49 + 12*2, 100);
 
   TimerSet(GCD_PERIOD);
   TimerOn();
