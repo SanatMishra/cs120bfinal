@@ -50,8 +50,8 @@ typedef struct Enemy : public Actor {
   uchar tsf;
 } Enemy;
 
-#define MAX_BULLETS 10
-#define MAX_ENEMIES 5
+#define MAX_BULLETS 15
+#define MAX_ENEMIES 7
 
 #define PLAYER_SPRITENO 0
 #define BULLET_SPRITENO 1

@@ -2,9 +2,6 @@
 #include "music.h"
 #include "serialATmega.h"
 
-#define tn(x,y) tones[tracks[i].tonei + tracks[i].numTones++] = (ushort)((tracks[i].key + (x)) + (((y)*tracks[i].speed - 1) << 7));
-#define t0(x) tones[tracks[i].tonei + tracks[i].numTones++] = (ushort)(((x)*tracks[i].speed) << 7);
-
 float getFreq(uchar note) {
   if (note == 0) return 0;
   return c1freq * pow(2.0, (note - 1.0)/12);
@@ -34,9 +31,6 @@ void stone(float freq) {
   TCCR1A |= (1 << COM1A1);
 }
 
-ushort tones[MAXTONES];
-track tracks[NUM_TRACKS];
-
 uint curTrackI;
 uchar curToneI;
 ushort curTone;
@@ -46,8 +40,8 @@ bool notebreak;
 
 void newTrack(uint arg) {
   curTrackI = arg;
-  curToneI = tracks[arg].tonei;
-  curTone = tones[curToneI];
+  curToneI = tracksToneI(arg);
+  curTone = pgm_read_word(&tones[curToneI]);
   notebreak = 0;
 }
 
@@ -57,57 +51,7 @@ void queueBeep(uchar note, uchar len) {
 }
 
 void initializeTracks() {
-  uchar i;
-
-  i = 0;
-  tracks[0].key = 35;
-  tracks[0].speed = 7;
-  tracks[0].numTones = 0;
-  tracks[0].loop = 0;
-  tracks[0].tonei = 0;
-  tn(7, 3); tn(7, 1); tn(7, 1); tn(7, 1); tn(12, 3);
-
-  i = 1;
-  tracks[1].key = 30;
-  tracks[1].speed = 10;
-  tracks[1].numTones = 0;
-  tracks[1].loop = 1;
-  tracks[1].tonei = tracks[0].tonei + tracks[0].numTones;
-  t0(1); tn(-5,1); tn(0,1); tn(3,1);
-  tn(7,1); tn(0,1); tn(3,1); tn(7,1);
-  tn(12,1); tn(3,1); tn(7,1); tn(12,1);
-  tn(12,1); tn(15,1); tn(12,1); tn(7,1);
-
-  t0(1); tn(0,1); tn(3,1); tn(7,1);
-  tn(0,1); tn(3,1); tn(7,1); tn(12,1);
-  tn(12,1); tn(15,1); tn(12,1); tn(7,1);
-  tn(7,1); tn(3,1); tn(7,1); tn(6,1);
-
-  tn(5,1); tn(2,1); tn(5,1); tn(8,1);
-  tn(12,1); tn(5,1); tn(8,1); tn(12,1);
-  tn(19,1); tn(17,1); tn(16,1); tn(19,1);
-  tn(12,1); tn(10,1); tn(8,1); tn(12,1);
-
-  tn(10,1); tn(7,1); tn(10,1); tn(8,1);
-  tn(5,1); tn(8,1); tn(7,1); tn(2,1);
-  tn(-1,1); tn(0,1); tn(2,1); tn(3,1);
-  tn(5,2);           tn(2,2);
-
-  i = 2;
-  tracks[2].key = 30;
-  tracks[2].speed = 5;
-  tracks[2].numTones = 0;
-  tracks[2].loop = 0;
-  tracks[2].tonei = tracks[1].tonei + tracks[1].numTones;
-  tn(12, 6); tn(11, 1); tn(9, 1); tn(8, 5);
-
-  i = 3;
-  tracks[3].key = 42;
-  tracks[3].speed = 7;
-  tracks[3].numTones = 0;
-  tracks[3].loop = 0;
-  tracks[3].tonei = tracks[2].tonei + tracks[2].numTones;
-  tn(-2, 1); tn(-1, 1); tn(0, 1); tn(-2, 1); tn(-1, 1); tn(0, 1); tn(-2, 1); tn(-1, 1); tn(0, 1);
+  
 }
 
 void advanceMusic() {
@@ -116,49 +60,23 @@ void advanceMusic() {
   if (beepDur > 0) {
     stone(getFreq(beepNote));
     beepDur--;
-  } else if (!notebreaki && curToneI != tracks[curTrackI].tonei + tracks[curTrackI].numTones) {
+  } else if (!notebreaki && curToneI != tracksToneI(curTrackI) + tracksN(curTrackI)) {
     stone(getFreq(t2n(curTone)));
   } else {
     stone(getFreq(0));
     return;
   }
-  if (!notebreaki && curToneI != tracks[curTrackI].tonei + tracks[curTrackI].numTones) {
+  if (!notebreaki && curToneI != tracksToneI(curTrackI) + tracksN(curTrackI)) {
     if (t2d(curTone) != 0x1FF) {
       curTone = d2t(curTone, t2d(curTone) - 1);
     }
     if (t2d(curTone) == 0) {
       curToneI++;
-      if (curToneI == tracks[curTrackI].tonei + tracks[curTrackI].numTones && tracks[curTrackI].loop)
-        curToneI = tracks[curTrackI].tonei;
-      if (curToneI != tracks[curTrackI].tonei + tracks[curTrackI].numTones)
-        curTone = tones[curToneI];
+      if (curToneI == tracksToneI(curTrackI) + tracksN(curTrackI) && tracksLoop(curTrackI))
+        curToneI = tracksToneI(curTrackI);
+      if (curToneI != tracksToneI(curTrackI) + tracksN(curTrackI))
+        curTone = pgm_read_word(&tones[curToneI]);
       notebreak = 1;
     }
   }
-
-
-  // uchar outNote;
-  // if (curToneI == tracks[curTrackI].numTones && beepDur == 0) {
-  //   stone(getFreq(0));
-  //   return;
-  // }
-  // if (beepDur > 0) {
-  //   outNote = beepNote;
-  //   beepDur--;
-  // } else {
-  //   outNote = t2n(curTone);
-  // }
-  // if (curToneI != tracks[curTrackI].numTones) {
-  //   if (t2d(curTone) != 0x1FF) {
-  //     curTone = d2t(curTone, t2d(curTone) - 1);
-  //   }
-  //   if (t2d(curTone) == 0) {
-  //     curToneI++;
-  //     if (curToneI == tracks[curTrackI].numTones && tracks[curTrackI].loop)
-  //       curToneI = 0;
-  //     if (curToneI != tracks[curTrackI].numTones)
-  //       curTone = tracks[curTrackI].track[curToneI];
-  //   }
-  // }
-  // stone(getFreq(outNote));
 }

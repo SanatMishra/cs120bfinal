@@ -295,7 +295,7 @@ void genEnemyCheck() {
 
 void playerFires() {
   if (bt_up && gameTime > 0) {
-    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0, 1, 0);
+    newBullet(player.x + 0.5*(player.w - 2), player.y + player.h, 0, 2, 0);
   }
 }
 
